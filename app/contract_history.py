@@ -73,7 +73,7 @@ def scan_block(fromBlock=1, max=0):
             logging.error("block %d is not fetched" % i)
             continue
         if i % 1000 == 0:
-            print("Block height: %d, miner: %s, tx_count: %d" % (block['number'], block['miner'], len(block['transactions'])))
+            logging.info("Block height: %d, miner: %s, tx_count: %d" % (block['number'], block['miner'], len(block['transactions'])))
             # conn.commit()
             # f.flush()
         # c.execute("INSERT INTO "+block_table+" VALUES ("+str(block['number'])+",'"+block['miner']+"',"+str(len(block['transactions']))+")")
@@ -121,6 +121,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     log = logging.getLogger()
     log.addHandler(log_file_handler)
+    logging.getLogger("requests").setLevel(logging.WARNING)
 
     # init database settings
     engine = create_engine('sqlite:///fdxqs.db')
