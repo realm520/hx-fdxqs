@@ -1,16 +1,7 @@
-import sys, os
-sys.path.append(os.path.dirname(__file__) + os.sep + './')
 from datetime import datetime
 import hashlib
 from flask import current_app, request, url_for
 from . import db
-
-class Permission:
-    FOLLOW = 1
-    COMMENT = 2
-    WRITE = 4
-    MODERATE = 8
-    ADMIN = 16
 
 
 class Config(db.Model):
