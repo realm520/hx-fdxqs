@@ -93,17 +93,28 @@ def make_shell_context():
     return dict(app=app, db=db, User=User, Role=Role)
 
 
+@app.cli.command('hello')
+def hello():
+    print("hello")
+
+
 @app.cli.command('initdb')
 def initdb():
     db.create_all()
     print("init db finished")
 
 
+@app.cli.command('dropdb')
+def dropdb():
+    db.drop_all()
+    print("drop db finished")
+
+
 @app.cli.command('scan_block')
 def scan_block():
     from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
-    ch.scan_block(500, 1003)
+    ch.scan_block(1)
     print("scan block finished")
 
 
