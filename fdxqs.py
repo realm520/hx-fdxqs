@@ -21,6 +21,11 @@ scheduler = APScheduler()
 jsonrpc = JSONRPC(app, '/api')
 
 
+@app.cli.command('hello')
+def hello():
+    print("hello")
+
+
 log_fmt = '%(asctime)s\tFile \"%(filename)s\",line %(lineno)s\t%(levelname)s: %(message)s'
 formatter = logging.Formatter(log_fmt)
 log_file_handler = TimedRotatingFileHandler(filename="hx_util_log", when="D", interval=1, backupCount=7)
@@ -41,16 +46,6 @@ def index():
 @app.route('/user/<name>')
 def user(name):
     return '<h1>Hello, %s!<h1>' % name
-
-
-@jsonrpc.method('hx.fdxqs.summary')
-def index():
-    return u'Welcome to Flask JSON-RPC'
-
-
-@jsonrpc.method('hx.fdxqs.info')
-def blockchain_info():
-    return get_info_result()
 
 
 @jsonrpc.method('hx.fdxqs.task.pause')
@@ -90,12 +85,7 @@ def add_job():
 
 @app.shell_context_processor
 def make_shell_context():
-    return dict(app=app, db=db, User=User, Role=Role)
-
-
-@app.cli.command('hello')
-def hello():
-    print("hello")
+    return dict(app=app, db=db)
 
 
 @app.cli.command('initdb')
