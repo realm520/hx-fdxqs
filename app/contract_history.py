@@ -11,19 +11,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Text
 
 
-Base = declarative_base()
-
-class TxRawHistory(Base):
-    __tablename__ = 'tx_raw_history'
-    
-    id = Column(Integer, primary_key=True)
-    tx_id = Column(String(64), index=True)
-    tx_json = Column(Text, default=False)
-
-    def __repr__(self):
-        return "<TxRawHistory(id='%s', tx_id='%s', tx_json='%s')>" % (
-                   self.id, self.fullname, self.password)
-
 
 db_source = "hx.s3db"
 config_table = "hx_config"
@@ -66,7 +53,7 @@ def scan_block(fromBlock=1, max=0):
         maxBlockNum = int(info['head_block_num'])
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    f = open('hx_contract_txs.csv', 'w+')
+    f = open('hx_contract_txs.csv', 'a')
     for i in range(fromBlock, maxBlockNum):
         block = http_request('get_block', [i])
         if block is None:
@@ -124,7 +111,7 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
 
     # init database settings
-    engine = create_engine('sqlite:///fdxqs.db')
+    #engine = create_engine('sqlite:///fdxqs.db')
 
 
     scan_block(1)
