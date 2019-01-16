@@ -4,114 +4,96 @@ import sqlite3
 import json
 import requests
 import logging
-# from models import TxRawHistory
-from logging.handlers import TimedRotatingFileHandler
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Text
+from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig
 
 
+class ContractHistory():
+    def __init__(self, config, db):
+        self.rpc_connect = config['HX_RPC_ENDPOINT']
+        self.base_path = config['WORK_DIR']
+        self.db = db
 
-db_source = "hx.s3db"
-config_table = "hx_config"
-block_table = "hx_block"
-user_table = "hx_user"
-rpc_connect = "http://132.232.21.36:8099"
+    def http_request(self, method, args):
+        args_j = json.dumps(args)
+        payload =  "{\r\n \"id\": 1,\r\n \"method\": \"%s\",\r\n \"params\": %s\r\n}" % (method, args_j)
+        headers = {
+                'content-type': "text/plain",
+                'cache-control': "no-cache",
+        }
+        while True:
+            try:
+                response = requests.request("POST", self.rpc_connect, data=payload, headers=headers)
+                #print type(response)
+                #print response.text
+                rep = response.json()
+                if "result" in rep:
+                    return rep["result"]
+            except Exception:
+                logging.error("Retry: %s" % payload)
+                continue
+    
 
-
-def http_request(method, args):
-    url = rpc_connect
-    args_j = json.dumps(args)
-    payload =  "{\r\n \"id\": 1,\r\n \"method\": \"%s\",\r\n \"params\": %s\r\n}" % (method, args_j)
-    headers = {
-            'content-type': "text/plain",
-            'cache-control': "no-cache",
-    }
-    while True:
-        try:
-            response = requests.request("POST", url, data=payload, headers=headers)
-            #print type(response)
-            #print response.text
-            rep = response.json()
-            if "result" in rep:
-                return rep["result"]
-        except Exception:
-            logging.error("Retry: %s" % payload)
-            continue
-
-
-def get_info_result():
-    info = http_request('info', [])
-    return info
+    def get_info_result(self):
+        info = self.http_request('info', [])
+        return info
 
 
-def scan_block(fromBlock=1, max=0):
-    if max > 0:
-        maxBlockNum = max
-    else:
-        info = get_info_result()
-        maxBlockNum = int(info['head_block_num'])
-    # conn = sqlite3.connect(db_path)
-    # c = conn.cursor()
-    f = open('hx_contract_txs.csv', 'a')
-    for i in range(fromBlock, maxBlockNum):
-        block = http_request('get_block', [i])
-        if block is None:
-            logging.error("block %d is not fetched" % i)
-            continue
-        if i % 1000 == 0:
-            logging.info("Block height: %d, miner: %s, tx_count: %d" % (block['number'], block['miner'], len(block['transactions'])))
-            # conn.commit()
-            # f.flush()
-        # c.execute("INSERT INTO "+block_table+" VALUES ("+str(block['number'])+",'"+block['miner']+"',"+str(len(block['transactions']))+")")
-        if len(block['transactions']) > 0:
-            tx_count = 0
-            tx_prefix = str(i)+','+block['transaction_ids'][tx_count]
-            for t in block['transactions']:
-                for op in t['operations']:
-                    if op[0] == 76: # contract_register_operation
-                        op[1]['contract_code']['code'] = None
-                        f.write(tx_prefix+','+str(tx_count)+',contract_register,'+str(op[1])+'\n')
-                        logging.info(tx_prefix+','+str(op))
-                    elif op[0] == 77: # contract_upgrade_operation
-                        f.write(tx_prefix+','+str(tx_count)+',contract_upgrade,'+str(op[1])+'\n')
-                        logging.info(tx_prefix+','+str(op))
-                    elif op[0] == 78: # native_contract_register_operation
-                        f.write(tx_prefix+','+str(tx_count)+',native_contract_register,'+str(op[1])+'\n')
-                        logging.info(tx_prefix+','+str(op))
-                    elif op[0] == 79: # contract_invoke_operation
-                        f.write(tx_prefix+','+str(tx_count)+',contract_invoke_operation,'+str(op[1])+'\n')
-                        logging.info(tx_prefix+','+str(op))
-                    elif op[0] == 80: # storage_operation
-                        f.write(tx_prefix+','+str(tx_count)+',storage_operation,'+str(op[1])+'\n')
-                        logging.info(tx_prefix+','+str(op))
-                    elif op[0] == 81: # transfer_contract_operation
-                        f.write(tx_prefix+','+str(tx_count)+',transfer_contract_operation,'+str(op[1])+'\n')
-                        logging.info(tx_prefix+','+str(op))
-                    else:
-                        logging.info('Not processed: '+str(op[0]))
-                        pass
-            tx_count += 1
-    f.close()
-    # conn.commit()
-    # conn.close()
+    def scan_block(self, fromBlock=1, max=0):
+        if max > 0:
+            maxBlockNum = max
+        else:
+            info = self.get_info_result()
+            maxBlockNum = int(info['head_block_num'])
+        # conn = sqlite3.connect(db_path)
+        # c = conn.cursor()
+        f = open(self.base_path+'/hx_contract_txs.csv', 'a')
+        for i in range(fromBlock, maxBlockNum):
+            block = self.http_request('get_block', [i])
+            if block is None:
+                logging.error("block %d is not fetched" % i)
+                continue
+            if i % 1000 == 0:
+                logging.info("Block height: %d, miner: %s, tx_count: %d" % (block['number'], block['miner'], len(block['transactions'])))
+                ServiceConfig.query.filter_by(key='scan_block').delete()
+                self.db.session.add(ServiceConfig(key='scan_block', value=str(i)))
+                self.db.session.commit()
+            if len(block['transactions']) > 0:
+                tx_count = 0
+                tx_prefix = str(i)+'|'+block['transaction_ids'][tx_count]
+                for t in block['transactions']:
+                    op_count = 0
+                    for op in t['operations']:
+                        tx = None
+                        if op[0] == 76: # contract_register_operation
+                            op[1]['contract_code']['code'] = None
+                            self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
+                                    op_seq=op_count, tx_type='contract_register', tx_json=json.dumps(op[1])))
+                            logging.debug(tx_prefix+','+str(op))
+                        elif op[0] == 77: # contract_upgrade_operation
+                            self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
+                                    op_seq=op_count, tx_type='contract_upgrade', tx_json=json.dumps(op[1])))
+                            logging.debug(tx_prefix+','+str(op))
+                        elif op[0] == 78: # native_contract_register_operation
+                            self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
+                                    op_seq=op_count, tx_type='native_contract_register', tx_json=json.dumps(op[1])))
+                            logging.debug(tx_prefix+','+str(op))
+                        elif op[0] == 79: # contract_invoke_operation
+                            self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
+                                    op_seq=op_count, tx_type='contract_invoke_operation', tx_json=json.dumps(op[1])))
+                            logging.debug(tx_prefix+','+str(op))
+                        elif op[0] == 80: # storage_operation
+                            self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
+                                    op_seq=op_count, tx_type='contract_invoke_operation', tx_json=json.dumps(op[1])))
+                            logging.debug(tx_prefix+','+str(op))
+                        elif op[0] == 81: # transfer_contract_operation
+                            self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
+                                    op_seq=tx_count, tx_type='transfer_contract_operation', tx_json=json.dumps(op[1])))
+                            logging.debug(tx_prefix+','+str(op))
+                        else:
+                            logging.debug('Not processed: '+json.dumps(op[0]))
+                        op_count += 1
+                    tx_count += 1
+        ServiceConfig.query.filter_by(key='scan_block').delete()
+        self.db.session.add(ServiceConfig(key='scan_block', value=str(maxBlockNum-1)))
+        self.db.session.commit()
 
-
-if __name__ == '__main__':
-    # init log settings
-    log_fmt = '%(asctime)s\tFile \"%(filename)s\",line %(lineno)s\t%(levelname)s: %(message)s'
-    formatter = logging.Formatter(log_fmt)
-    log_file_handler = TimedRotatingFileHandler(filename="hx_util_log", when="D", interval=1, backupCount=7)
-    #log_file_handler.suffix = "%Y-%m-%d_%H-%M.log"
-    #log_file_handler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}.log$")
-    log_file_handler.setFormatter(formatter)
-    logging.basicConfig(level=logging.INFO)
-    log = logging.getLogger()
-    log.addHandler(log_file_handler)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-
-    # init database settings
-    #engine = create_engine('sqlite:///fdxqs.db')
-
-
-    scan_block(1)
