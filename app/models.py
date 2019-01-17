@@ -11,7 +11,7 @@ class ServiceConfig(db.Model):
         super(ServiceConfig, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<ServiceConfig %r>' % self.name
+        return '<ServiceConfig %r>' % self.key
 
 
 
