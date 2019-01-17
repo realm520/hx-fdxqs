@@ -38,14 +38,27 @@ log.addHandler(log_file_handler)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 
-@app.route('/')
-def index():
-    return '<h1>Hello World!</h1>'
-
-
 @app.route('/user/<name>')
 def user(name):
     return '<h1>Hello, %s!<h1>' % name
+
+
+@jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
+def exchange_deal_query(addr, pair, offset, limit):
+    #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
+    return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
+
+
+@jsonrpc.method('hx.fdxqs.exchange.ask.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
+def exchange_bid_query(addr, pair, offset, limit):
+    #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
+    return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
+
+
+@jsonrpc.method('hx.fdxqs.exchange.cancel.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
+def exchange_cancel_query(addr, pair, offset, limit):
+    #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
+    return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
 
 
 @jsonrpc.method('hx.fdxqs.task.pause')
@@ -108,7 +121,6 @@ def scan_block():
     print("scan block finished")
 
 
-
 @app.cli.command()
 @click.option('--coverage/--no-coverage', default=False, help='Enable code coverage')
 def test(coverage):
@@ -143,4 +155,4 @@ def profile(length=25, profile_dir=None):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=80)
