@@ -104,7 +104,7 @@ def dropdb():
 def scan_block():
     from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
-    ch.scan_block(1)
+    ch.scan_block()
     print("scan block finished")
 
 
