@@ -107,10 +107,20 @@ def initdb():
     print("init db finished")
 
 
-@app.cli.command('dropdb')
+@app.cli.command('cleardb')
 def dropdb():
     db.drop_all()
     print("drop db finished")
+
+
+@app.cli.command('rpc_test')
+@click.argument('method')
+@click.argument('args')
+def rpc_test(method, args):
+    from app.contract_history import ContractHistory
+    ch = ContractHistory(app.config, db)
+    rsp = ch.http_request(method, [args])
+    print(str(rsp))
 
 
 @app.cli.command('scan_block')

@@ -28,7 +28,20 @@ class TxContractRawHistory(db.Model):
         super(TxContractRawHistory, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<TxContractRawHistory %r>' % self.name
+        return '<TxContractRawHistory %r>' % self.tx_id
+
+
+class TxContractEventHistory(db.Model):
+    __tablename__ = 'tx_contract_event_history'
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.String(64), index=True)
+    tx_json = db.Column(db.Text)
+
+    def __init__(self, **kwargs):
+        super(TxContractEventHistory, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractEventHistory %r>' % self.tx_id
 
 
 class TxContractDealHistory(db.Model):
@@ -36,14 +49,36 @@ class TxContractDealHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     address = db.Column(db.String(64), index=True)
     tx_id = db.Column(db.String(64), index=True)
+    match_tx_id = db.Column(db.String(64), index=True)
     base_amount = db.Column(db.Integer)
     quote_amount = db.Column(db.Integer)
+    ex_type = db.Column(db.String(8))
     ex_pair = db.Column(db.String(64), index=True)
 
     def __init__(self, **kwargs):
         super(TxContractDealHistory, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<TxContractDealHistory %r>' % self.name
+        return '<TxContractDealHistory %r>' % self.tx_id
 
+
+class BlockRawHistory(db.Model):
+    __tablename__ = 'block_raw_history'
+    id = db.Column(db.Integer, primary_key=True)
+    block_height = db.Column(db.Integer)
+    block_id = db.Column(db.String(64), index=True)
+    prev_id = db.Column(db.String(64))
+    timestamp = db.Column(db.String(64))
+    trxfee = db.Column(db.String(64))
+    miner = db.Column(db.String(64))
+    next_secret_hash = db.Column(db.String(64))
+    previous_secret = db.Column(db.String(64))
+    reward = db.Column(db.String(64))
+    signing_key = db.Column(db.Text)
+
+    def __init__(self, **kwargs):
+        super(BlockRawHistory, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<BlockRawHistory %r>' % self.block_id
 
