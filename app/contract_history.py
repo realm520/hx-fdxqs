@@ -14,7 +14,17 @@ class ContractHistory():
         self.db = db
         self.block_cache_size = 360
         self.block_cache_limit = 720
+        self.load_block_cache()
+
+
+    def load_block_cache(self):
+        cache_records = BlockRawHistory.query.order_by(BlockRawHistory.block_height.desc()).limit(self.block_cache_size).all()
         self.block_cache = []
+        for record in cache_records:
+            self.block_cache.append({'number': record.block_height, 'block_id': record.block_id, 'previous': record.prev_id})
+        logging.info('Load %d records to block_cache.' % len(cache_records))
+        logging.info('Latest block height: %d .' % self.block_cache[0]['number'])
+
 
     def http_request(self, method, args):
         args_j = json.dumps(args)
