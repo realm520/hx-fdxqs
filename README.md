@@ -1,5 +1,5 @@
 # flask_base
-Create a basic web project by using Flask framework. Will use this project for creating a new web project.
+Contract exchange query service for HyperExchange project.
 
 # Dependency
 * Run pip to install dependencies.
@@ -8,6 +8,12 @@ pip install -r requirements.txt
 ```
 
 # Usage
+* Init db
+  ```
+  flask db init
+  flask db migrate
+  flask db upgrade
+  ```
 * Start debug service
   ```
   flask run
