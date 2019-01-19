@@ -1,4 +1,4 @@
-# flask_base
+# Full Decentrialized eXchange Query Service
 Contract exchange query service for HyperExchange project.
 
 # Dependency
