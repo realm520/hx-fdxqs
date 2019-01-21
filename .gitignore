@@ -1,0 +1,14 @@
+/.idea
+/*.iml
+/.vscode
+*~
+/build
+/dist
+/target
+/out
+/log
+/*.log
+/hx_util_log
+/data-dev.sqlite
+*.pyc
+/.pytest_cache
