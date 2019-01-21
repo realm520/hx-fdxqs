@@ -2,7 +2,7 @@ import click
 import os
 import logging
 from app import create_app, db
-from app.models import TxContractRawHistory, TxContractDealHistory
+from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, TxContractEventHistory, ContractInfo, BlockRawHistory
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -116,7 +116,12 @@ def make_shell_context():
 
 @app.cli.command('cleardb')
 def dropdb():
-    db.drop_all()
+    TxContractRawHistory.query.delete()
+    TxContractDealHistory.query.delete()
+    BlockRawHistory.query.delete()
+    TxContractEventHistory.query.delete()
+    ServiceConfig.query.delete()
+    ContractInfo.query.delete()
     print("drop db finished")
 
 

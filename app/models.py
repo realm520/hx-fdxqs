@@ -44,8 +44,8 @@ class TxContractEventHistory(db.Model):
         return '<TxContractEventHistory %r>' % self.tx_id
 
 
-class TxContractInfo(db.Model):
-    __tablename__ = 'tx_contract_info'
+class ContractInfo(db.Model):
+    __tablename__ = 'contract_info'
     id = db.Column(db.Integer, primary_key=True)
     invoker = db.Column(db.String(64), index=True)
     contract_id = db.Column(db.String(64), index=True)
@@ -58,10 +58,10 @@ class TxContractInfo(db.Model):
     timestamp = db.Column(db.String(64))
 
     def __init__(self, **kwargs):
-        super(TxContractInfo, self).__init__(**kwargs)
+        super(ContractInfo, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<TxContractInfo %r>' % self.tx_id
+        return '<ContractInfo %r>' % self.tx_id
     
     def toQueryObj(self):
         return {"invoker": self.invoker, "contract_id": self.contract_id, "tx_id": self.tx_id, \
