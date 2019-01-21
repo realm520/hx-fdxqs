@@ -43,10 +43,18 @@ def user(name):
     return '<h1>Hello, %s!<h1>' % name
 
 
-@jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
-def exchange_deal_query(addr, pair, offset, limit):
-    #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
-    return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
+@jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
+def exchange_deal_query(addr, pair, page=1, page_count=10):
+    print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
+    data = TxContractDealHistory.query.filter_by(address=addr, ex_pair=pair).\
+            order_by(TxContractDealHistory.id.desc()).paginate(page, page_count, False)
+    return {
+            'total_records': data.total,
+            'per_page': data.per_page,
+            'total_pages': data.pages,
+            'current_page': data.page,
+            'data': [t.toQueryObj() for t in data.items]
+        }
 
 
 @jsonrpc.method('hx.fdxqs.exchange.ask.query(addr=str, pair=str, offset=int, limit=int)', validate=True)

@@ -23,7 +23,8 @@ class ContractHistory():
         for record in cache_records:
             self.block_cache.append({'number': record.block_height, 'block_id': record.block_id, 'previous': record.prev_id})
         logging.info('Load %d records to block_cache.' % len(cache_records))
-        logging.info('Latest block height: %d .' % self.block_cache[0]['number'])
+        if len(self.block_cache) > 0:
+            logging.info('Latest block height: %d .' % self.block_cache[0]['number'])
 
 
     def http_request(self, method, args):
@@ -68,7 +69,7 @@ class ContractHistory():
             self.block_cache = self.block_cache[:self.block_cache_size]
         return ret
 
-    def get_contract_invoke_object(self, txid):
+    def get_contract_invoke_object(self, txid, block):
         invoke_obj = self.http_request('get_contract_invoke_object', [txid])
         if len(invoke_obj) <= 0:
             return
@@ -82,11 +83,13 @@ class ContractHistory():
                     for buys in order['transactionBuys']:
                         items = buys.split(',')
                         self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
-                                quote_amount=items[7], ex_type='buy', ex_pair=order['exchangPair']))
+                                quote_amount=items[7], ex_type='buy', ex_pair=order['exchangPair'], block_height=block['number'], \
+                                timestamp=block['timestamp']))
                     for sells in order['transactionSells']:
                         items = sells.split(',')
                         self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
-                                quote_amount=items[7], ex_type='sell', ex_pair=order['exchangPair']))
+                                quote_amount=items[7], ex_type='sell', ex_pair=order['exchangPair'], block_height=block['number'], \
+                                timestamp=block['timestamp']))
 
 
     def scan_block(self, fromBlock=0, max=0):
@@ -124,7 +127,6 @@ class ContractHistory():
                     op_count = 0
                     for op in t['operations']:
                         is_contract_type = True
-                        tx = None
                         if op[0] == 76: # contract_register_operation
                             op[1]['contract_code']['code'] = None
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
@@ -154,7 +156,7 @@ class ContractHistory():
                             is_contract_type = False
                             logging.debug('Not processed: '+json.dumps(op[0]))
                     if is_contract_type:
-                        self.get_contract_invoke_object(block['transaction_ids'][tx_count])
+                        self.get_contract_invoke_object(block['transaction_ids'][tx_count], block)
                         op_count += 1
                     tx_count += 1
         ServiceConfig.query.filter_by(key='scan_block').delete()

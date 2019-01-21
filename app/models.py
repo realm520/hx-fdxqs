@@ -54,12 +54,19 @@ class TxContractDealHistory(db.Model):
     quote_amount = db.Column(db.Integer)
     ex_type = db.Column(db.String(8))
     ex_pair = db.Column(db.String(64), index=True)
+    block_height = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
 
     def __init__(self, **kwargs):
         super(TxContractDealHistory, self).__init__(**kwargs)
 
     def __repr__(self):
         return '<TxContractDealHistory %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"addr": self.address, "pair": self.ex_pair, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "block_height": self.block_height, \
+                "timestamp": self.timestamp}
 
 
 class BlockRawHistory(db.Model):
