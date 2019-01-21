@@ -18,7 +18,7 @@ class ServiceConfig(db.Model):
 class TxContractRawHistory(db.Model):
     __tablename__ = 'tx_contract_raw_history'
     id = db.Column(db.Integer, primary_key=True)
-    block_height = db.Column(db.Integer)
+    block_num = db.Column(db.Integer)
     tx_id = db.Column(db.String(64), index=True)
     op_seq = db.Column(db.Integer)
     tx_type = db.Column(db.String(64))
@@ -36,6 +36,7 @@ class TxContractEventHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tx_id = db.Column(db.String(64), index=True)
     tx_json = db.Column(db.Text)
+    block_num = db.Column(db.Integer)
 
     def __init__(self, **kwargs):
         super(TxContractEventHistory, self).__init__(**kwargs)
@@ -54,7 +55,7 @@ class ContractInfo(db.Model):
     offline_abi = db.Column(db.Text)
     code_hash = db.Column(db.String(64))
     contract_type = db.Column(db.String(8))
-    block_height = db.Column(db.Integer)
+    block_num = db.Column(db.Integer)
     timestamp = db.Column(db.String(64))
 
     def __init__(self, **kwargs):
@@ -66,7 +67,7 @@ class ContractInfo(db.Model):
     def toQueryObj(self):
         return {"invoker": self.invoker, "contract_id": self.contract_id, "tx_id": self.tx_id, \
                 "contract_type": self.contract_type, "quote_amount": self.quote_amount, \
-                "block_height": self.block_height, "timestamp": self.timestamp}
+                "block_num": self.block_num, "timestamp": self.timestamp}
 
 
 class TxContractDealHistory(db.Model):
@@ -79,7 +80,7 @@ class TxContractDealHistory(db.Model):
     quote_amount = db.Column(db.Integer)
     ex_type = db.Column(db.String(8))
     ex_pair = db.Column(db.String(64), index=True)
-    block_height = db.Column(db.Integer)
+    block_num = db.Column(db.Integer)
     timestamp = db.Column(db.String(64))
 
     def __init__(self, **kwargs):
@@ -90,14 +91,37 @@ class TxContractDealHistory(db.Model):
     
     def toQueryObj(self):
         return {"addr": self.address, "pair": self.ex_pair, "base_amount": self.base_amount, \
-                "quote_amount": self.quote_amount, "block_height": self.block_height, \
+                "quote_amount": self.quote_amount, "block_num": self.block_num, \
                 "timestamp": self.timestamp}
+
+
+class ContractPersonExchangeEvent(db.Model):
+    __tablename__ = 'contract_person_exchange_event'
+    id = db.Column(db.Integer, primary_key=True)
+    caller_addr = db.Column(db.String(64), index=True)
+    contract_address = db.Column(db.String(64), index=True)
+    tx_id = db.Column(db.String(64), index=True)
+    event_name = db.Column(db.String(64), index=True)
+    event_arg = db.Column(db.Text)
+    op_num = db.Column(db.Integer)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(ContractPersonExchangeEvent, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<ContractPersonExchangeEvent %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"caller_addr": self.caller_addr, "event_name": self.event_name, "tx_id": self.tx_id, \
+                "event_arg": self.event_arg, "block_num": self.block_num, "timestamp": self.timestamp}
 
 
 class BlockRawHistory(db.Model):
     __tablename__ = 'block_raw_history'
     id = db.Column(db.Integer, primary_key=True)
-    block_height = db.Column(db.Integer)
+    block_num = db.Column(db.Integer)
     block_id = db.Column(db.String(64), index=True)
     prev_id = db.Column(db.String(64))
     timestamp = db.Column(db.String(64))
