@@ -44,6 +44,31 @@ class TxContractEventHistory(db.Model):
         return '<TxContractEventHistory %r>' % self.tx_id
 
 
+class TxContractInfo(db.Model):
+    __tablename__ = 'tx_contract_info'
+    id = db.Column(db.Integer, primary_key=True)
+    invoker = db.Column(db.String(64), index=True)
+    contract_id = db.Column(db.String(64), index=True)
+    tx_id = db.Column(db.String(64))
+    abi = db.Column(db.Text)
+    offline_abi = db.Column(db.Text)
+    code_hash = db.Column(db.String(64))
+    contract_type = db.Column(db.String(8))
+    block_height = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(TxContractInfo, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractInfo %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"invoker": self.invoker, "contract_id": self.contract_id, "tx_id": self.tx_id, \
+                "contract_type": self.contract_type, "quote_amount": self.quote_amount, \
+                "block_height": self.block_height, "timestamp": self.timestamp}
+
+
 class TxContractDealHistory(db.Model):
     __tablename__ = 'tx_contract_deal_history'
     id = db.Column(db.Integer, primary_key=True)

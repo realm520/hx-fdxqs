@@ -38,9 +38,9 @@ log.addHandler(log_file_handler)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 
-@app.route('/user/<name>')
-def user(name):
-    return '<h1>Hello, %s!<h1>' % name
+# @app.route('/user/<name>')
+# def user(name):
+#     return '<h1>Hello, %s!<h1>' % name
 
 
 @jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
@@ -56,7 +56,7 @@ def exchange_deal_query(addr, pair, page=1, page_count=10):
             'data': [t.toQueryObj() for t in data.items]
         }
 
-
+'''
 @jsonrpc.method('hx.fdxqs.exchange.ask.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
 def exchange_bid_query(addr, pair, offset, limit):
     #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
@@ -67,7 +67,7 @@ def exchange_bid_query(addr, pair, offset, limit):
 def exchange_cancel_query(addr, pair, offset, limit):
     #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
     return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
-
+'''
 
 @jsonrpc.method('hx.fdxqs.task.pause')
 def pause_job(id):
@@ -79,14 +79,10 @@ def resume_job(id):
     scheduler.resume_job(id)
     return "Success!"
 
-@jsonrpc.method('hx.fdxqs.task.get(id=int)', validate=True)
-def get_job(id) :
-    jobs=scheduler.get_jobs()
-    current = ""
-    for j in jobs:
-        if int(j.id) == id:
-            current = str(j.id)
-    return current
+@jsonrpc.method('hx.fdxqs.task.start')
+def start_job() :
+    scheduler.start()
+    return "Success!"
 
 @jsonrpc.method('hx.fdxqs.task.remove(id=int)', validate=True)
 def remove_job(id):
@@ -98,21 +94,24 @@ def remove_job(id):
             current = str(j.id)
     return current
 
-@jsonrpc.method('hx.fdxqs.task.add')
+
+def scan_block_task():
+    from app.contract_history import ContractHistory
+    db.init_app(app)
+    ch = ContractHistory(app.config, db)
+    ch.scan_block()
+    logging.info("scan block task finished")
+
+
+@jsonrpc.method('hx.fdxqs.task.add_scan_block')
 def add_job():
-    scheduler.add_job(func=job_1, id='1', trigger='interval', seconds=5, replace_existing=True)
+    scheduler.add_job(func=scan_block_task, id='1', trigger='interval', seconds=5, replace_existing=True)
     return 'sucess'
 
 
 @app.shell_context_processor
 def make_shell_context():
     return dict(app=app, db=db)
-
-
-@app.cli.command('initdb')
-def initdb():
-    db.create_all()
-    print("init db finished")
 
 
 @app.cli.command('cleardb')

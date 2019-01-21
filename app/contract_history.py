@@ -4,10 +4,20 @@ import sqlite3
 import json
 import requests
 import logging
-from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, BlockRawHistory, TxContractEventHistory
+from app.models import TxContractRawHistory, TxContractDealHistory, TxContractInfo, \
+        ServiceConfig, BlockRawHistory, TxContractEventHistory
 
 
 class ContractHistory():
+    OP_TYPE_CONTRACT_REGISTER = 76
+    OP_TYPE_CONTRACT_UPGRADE = 77
+    OP_TYPE_CONTRACT_INVOKE = 79
+    EXCHANGE_PERSONAL_TYPE_ABI = r'["cancelAllOrder", "cancelSellOrder", "cancelSellOrderPair", "close", "init", "on_deposit_asset", "on_destroy", "putOnSellOrder", "withdrawAll", "withdrawAsset", "withrawRemainAsset"]'
+    EXCHANGE_PAIR_TYPE_ABI = r'["cancelBuyOrder", "cancelSellOrder", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "testtable"]'
+    EXCHANGE_TYPE_ABI = r'["cancelChangeAdminProposal", "cancelOrder", "cancelRegisterExchangePairProposal", "cancelUnboundExchangePairProposal", "freezeExchangePair", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "submitChangeAdminProposal", "submitRegisterExchangePairProposal", "submitUnboundExchangePairProposal", "unfreezeExchangePair", "unlockUserOffPairBalance", "voteChangeAdminProposal", "voteRegisterExchangePairProposal", "voteUnboundExchangePairProposal", "withdraw"]'
+    STO_TYPE_ABI = r'["addCrowdfundingInfo", "adminWithdrawFund", "approve", "changeAdmin", "closeCrowdfunding", "deleteLastCrowdfundingInfo", "init", "init_config", "modifyLastCrowdfundingInfo", "on_deposit_asset", "on_destroy", "openCrowdfunding", "pause", "resume", "returnAllCrowdAssetBack", "stop", "transfer", "transferFrom", "userGetCrowdAssetBack", "withdrawBonuses"]'
+
+
     def __init__(self, config, db):
         self.rpc_connect = config['HX_RPC_ENDPOINT']
         self.base_path = config['WORK_DIR']
@@ -69,7 +79,8 @@ class ContractHistory():
             self.block_cache = self.block_cache[:self.block_cache_size]
         return ret
 
-    def get_contract_invoke_object(self, txid, block):
+
+    def get_contract_invoke_object(self, op, txid, block):
         invoke_obj = self.http_request('get_contract_invoke_object', [txid])
         if len(invoke_obj) <= 0:
             return
@@ -77,19 +88,36 @@ class ContractHistory():
         for obj in invoke_obj:
             if not obj['exec_succeed']:
                 continue
-            for e in obj['events']:
-                if e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn':
-                    order = json.loads(e['event_arg'])
-                    for buys in order['transactionBuys']:
-                        items = buys.split(',')
-                        self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
-                                quote_amount=items[7], ex_type='buy', ex_pair=order['exchangPair'], block_height=block['number'], \
-                                timestamp=block['timestamp']))
-                    for sells in order['transactionSells']:
-                        items = sells.split(',')
-                        self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
-                                quote_amount=items[7], ex_type='sell', ex_pair=order['exchangPair'], block_height=block['number'], \
-                                timestamp=block['timestamp']))
+            if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER:
+                abi = json.dumps(op[1]['contract_code']['abi'])
+                if abi == ContractHistory.STO_TYPE_ABI:
+                    contract_type = 'sto'
+                elif abi == ContractHistory.EXCHANGE_PAIR_TYPE_ABI:
+                    contract_type = 'exchange_pair'
+                elif abi == ContractHistory.EXCHANGE_PERSONAL_TYPE_ABI:
+                    contract_type = 'exchange_personal'
+                elif abi == ContractHistory.EXCHANGE_TYPE_ABI:
+                    contract_type = 'exchange'
+                else:
+                    contract_type = 'unknown'
+                self.db.session.add(TxContractInfo(invoker=obj['invoker'], contract_id=obj['contract_registed'], \
+                        tx_id=txid, abi=abi, code_hash=op[1]['contract_code']['code_hash'], \
+                        offline_abi=json.dumps(op[1]['contract_code']['offline_abi']), block_height=block['number'], \
+                        timestamp=block['timestamp'], contract_type=contract_type))
+            elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
+                for e in obj['events']:
+                    if e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn':
+                        order = json.loads(e['event_arg'])
+                        for buys in order['transactionBuys']:
+                            items = buys.split(',')
+                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
+                                    quote_amount=items[7], ex_type='buy', ex_pair=order['exchangPair'], block_height=block['number'], \
+                                    timestamp=block['timestamp']))
+                        for sells in order['transactionSells']:
+                            items = sells.split(',')
+                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
+                                    quote_amount=items[7], ex_type='sell', ex_pair=order['exchangPair'], block_height=block['number'], \
+                                    timestamp=block['timestamp']))
 
 
     def scan_block(self, fromBlock=0, max=0):
@@ -127,12 +155,12 @@ class ContractHistory():
                     op_count = 0
                     for op in t['operations']:
                         is_contract_type = True
-                        if op[0] == 76: # contract_register_operation
+                        if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER:
                             op[1]['contract_code']['code'] = None
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, tx_type='contract_register', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == 77: # contract_upgrade_operation
+                        elif op[0] == ContractHistory.OP_TYPE_CONTRACT_UPGRADE:
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, tx_type='contract_upgrade', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
@@ -140,13 +168,13 @@ class ContractHistory():
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, tx_type='native_contract_register', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == 79: # contract_invoke_operation
+                        elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, tx_type='contract_invoke_operation', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
                         elif op[0] == 80: # storage_operation
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='contract_invoke_operation', tx_json=json.dumps(op[1])))
+                                    op_seq=op_count, tx_type='storage_operation', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
                         elif op[0] == 81: # transfer_contract_operation
                             self.db.session.add(TxContractRawHistory(block_height=i, tx_id=block['transaction_ids'][tx_count], \
@@ -156,7 +184,7 @@ class ContractHistory():
                             is_contract_type = False
                             logging.debug('Not processed: '+json.dumps(op[0]))
                     if is_contract_type:
-                        self.get_contract_invoke_object(block['transaction_ids'][tx_count], block)
+                        self.get_contract_invoke_object(op, block['transaction_ids'][tx_count], block)
                         op_count += 1
                     tx_count += 1
         ServiceConfig.query.filter_by(key='scan_block').delete()
