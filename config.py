@@ -16,7 +16,8 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    HX_RPC_ENDPOINT = "http://132.232.21.36:8099"
+    HX_RPC_ENDPOINT = "http://127.0.0.1:50321"
+    CONTRACT_CALLER = 'ai'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
 
@@ -29,9 +30,10 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    HX_RPC_ENDPOINT = "http://132.232.21.36:8099"
+    HX_RPC_ENDPOINT = "http://127.0.0.1:8099"
+    CONTRACT_CALLER = 'order'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+        'postgresql://fdxqs:HyperExchange2019#@localhost/fdxqs'
 
 
 config = {
