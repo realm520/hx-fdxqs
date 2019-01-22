@@ -31,7 +31,7 @@ class ContractHistory():
         cache_records = BlockRawHistory.query.order_by(BlockRawHistory.block_num.desc()).limit(self.block_cache_size).all()
         self.block_cache = []
         for record in cache_records:
-            self.block_cache.append({'number': record.block_height, 'block_id': record.block_id, 'previous': record.prev_id})
+            self.block_cache.append({'number': record.block_num, 'block_id': record.block_id, 'previous': record.prev_id})
         logging.info('Load %d records to block_cache.' % len(cache_records))
         if len(self.block_cache) > 0:
             logging.info('Latest block height: %d .' % self.block_cache[0]['number'])
@@ -114,6 +114,10 @@ class ContractHistory():
                         offline_abi=json.dumps(op[1]['contract_code']['offline_abi']), block_num=block['number'], \
                         timestamp=block['timestamp'], contract_type=contract_type))
             elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
+                contract_info = ContractInfo.query.filter_by(contract_id=op[1]['contract_id']).first()
+                if contract_info is None:
+                    continue
+                contract_type = contract_info.contract_type
                 for e in obj['events']:
                     if contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
                         order = json.loads(e['event_arg'])
