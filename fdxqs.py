@@ -46,8 +46,8 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 @jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
-def exchange_deal_query(addr, pair, page=1, page_count=10):
-    print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
+def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
+    logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
     data = TxContractDealHistory.query.filter_by(address=addr, ex_pair=pair).\
             order_by(TxContractDealHistory.id.desc()).paginate(page, page_count, False)
     return {
@@ -57,6 +57,23 @@ def exchange_deal_query(addr, pair, page=1, page_count=10):
             'current_page': data.page,
             'data': [t.toQueryObj() for t in data.items]
         }
+
+
+@jsonrpc.method('hx.fdxqs.order.query(from_asset=str, to_asset=str, page=int, page_count=int)')
+def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
+    logging.info('[hx.fdxqs.order.query] - from_asset: %s, to_asset: %s, page: %d, page_count: %d' % (from_asset, to_asset, page, page_count))
+
+    data = ContractPersonExchangeOrder.query.filter_by(from_asset=from_asset, to_asset=to_asset).\
+            order_by(ContractPersonExchangeOrder.price).paginate(page, page_count, False)
+
+    return {
+            'total_records': data.total,
+            'per_page': data.per_page,
+            'total_pages': data.pages,
+            'current_page': data.page,
+            'data': [t.toQueryObj() for t in data.items]
+        }
+
 
 '''
 @jsonrpc.method('hx.fdxqs.exchange.ask.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
@@ -70,46 +87,6 @@ def exchange_cancel_query(addr, pair, offset, limit):
     #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
     return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
 '''
-
-@jsonrpc.method('hx.fdxqs.task.pause')
-def pause_job(id):
-    scheduler.pause_job(id)
-    return "Success!"
-
-@jsonrpc.method('hx.fdxqs.task.resume')
-def resume_job(id):
-    scheduler.resume_job(id)
-    return "Success!"
-
-@jsonrpc.method('hx.fdxqs.task.start')
-def start_job() :
-    scheduler.start()
-    return "Success!"
-
-@jsonrpc.method('hx.fdxqs.task.remove(id=int)', validate=True)
-def remove_job(id):
-    jobs=scheduler.get_jobs()
-    current = ""
-    for j in jobs:
-        if int(j.id) == id:
-            scheduler.delete_job(j.id)
-            current = str(j.id)
-    return current
-
-
-def scan_block_task():
-    from app.contract_history import ContractHistory
-    db.init_app(app)
-    ch = ContractHistory(app.config, db)
-    ch.scan_block()
-    logging.info("scan block task finished")
-
-
-@jsonrpc.method('hx.fdxqs.task.add_scan_block')
-def add_job():
-    scheduler.add_job(func=scan_block_task, id='1', trigger='interval', seconds=5, replace_existing=True)
-    return 'sucess'
-
 
 @app.shell_context_processor
 def make_shell_context():
