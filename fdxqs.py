@@ -2,7 +2,9 @@ import click
 import os
 import logging
 from app import create_app, db
-from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, TxContractEventHistory, ContractInfo, BlockRawHistory
+from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
+        TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
+        ContractPersonExchangeEvent
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -122,7 +124,9 @@ def dropdb():
     TxContractEventHistory.query.delete()
     ServiceConfig.query.delete()
     ContractInfo.query.delete()
-    print("drop db finished")
+    ContractPersonExchangeOrder.query.delete()
+    ContractPersonExchangeEvent.query.delete()
+    print("clear db finished")
 
 
 @app.cli.command('rpc_test')
@@ -141,6 +145,14 @@ def scan_block():
     ch = ContractHistory(app.config, db)
     ch.scan_block()
     print("scan block finished")
+
+
+@app.cli.command('scan_person_exchange')
+def scan_person_exchange():
+    from app.contract_history import ContractHistory
+    ch = ContractHistory(app.config, db)
+    ch.exchange_person_orders(1)
+    print("scan contract finished")
 
 
 @app.cli.command()

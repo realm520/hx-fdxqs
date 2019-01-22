@@ -118,6 +118,27 @@ class ContractPersonExchangeEvent(db.Model):
                 "event_arg": self.event_arg, "block_num": self.block_num, "timestamp": self.timestamp}
 
 
+class ContractPersonExchangeOrder(db.Model):
+    __tablename__ = 'contract_person_exchange_order'
+    id = db.Column(db.Integer, primary_key=True)
+    contract_address = db.Column(db.String(64), index=True)
+    from_asset = db.Column(db.Integer)
+    to_asset = db.Column(db.Integer)
+    from_supply = db.Column(db.Integer)
+    to_supply = db.Column(db.Integer)
+    price = db.Column(db.String(64), index=True)
+
+    def __init__(self, **kwargs):
+        super(ContractPersonExchangeOrder, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<ContractPersonExchangeOrder %r>' % self.contract_address
+    
+    def toQueryObj(self):
+        return {"contract_address": self.contract_address, "from_asset": self.from_asset, "to_asset": self.to_asset, \
+                "from_supply": self.from_supply, "to_supply": self.to_supply, "price": self.price}
+
+
 class BlockRawHistory(db.Model):
     __tablename__ = 'block_raw_history'
     id = db.Column(db.Integer, primary_key=True)

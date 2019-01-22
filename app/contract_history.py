@@ -5,14 +5,15 @@ import json
 import requests
 import logging
 from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
-        ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent
+        ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
+        ContractPersonExchangeOrder
 
 
 class ContractHistory():
     OP_TYPE_CONTRACT_REGISTER = 76
     OP_TYPE_CONTRACT_UPGRADE = 77
     OP_TYPE_CONTRACT_INVOKE = 79
-    EXCHANGE_PERSONAL_TYPE_ABI = r'["cancelAllOrder", "cancelSellOrder", "cancelSellOrderPair", "close", "init", "on_deposit_asset", "on_destroy", "putOnSellOrder", "withdrawAll", "withdrawAsset", "withrawRemainAsset"]'
+    EXCHANGE_PERSON_TYPE_ABI = r'["cancelAllOrder", "cancelSellOrder", "cancelSellOrderPair", "close", "init", "on_deposit_asset", "on_destroy", "putOnSellOrder", "withdrawAll", "withdrawAsset", "withrawRemainAsset"]'
     EXCHANGE_PAIR_TYPE_ABI = r'["cancelBuyOrder", "cancelSellOrder", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "testtable"]'
     EXCHANGE_TYPE_ABI = r'["cancelChangeAdminProposal", "cancelOrder", "cancelRegisterExchangePairProposal", "cancelUnboundExchangePairProposal", "freezeExchangePair", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "submitChangeAdminProposal", "submitRegisterExchangePairProposal", "submitUnboundExchangePairProposal", "unfreezeExchangePair", "unlockUserOffPairBalance", "voteChangeAdminProposal", "voteRegisterExchangePairProposal", "voteUnboundExchangePairProposal", "withdraw"]'
     STO_TYPE_ABI = r'["addCrowdfundingInfo", "adminWithdrawFund", "approve", "changeAdmin", "closeCrowdfunding", "deleteLastCrowdfundingInfo", "init", "init_config", "modifyLastCrowdfundingInfo", "on_deposit_asset", "on_destroy", "openCrowdfunding", "pause", "resume", "returnAllCrowdAssetBack", "stop", "transfer", "transferFrom", "userGetCrowdAssetBack", "withdrawBonuses"]'
@@ -22,6 +23,7 @@ class ContractHistory():
         self.rpc_connect = config['HX_RPC_ENDPOINT']
         self.base_path = config['WORK_DIR']
         self.db = db
+        self.contract_caller = config['CONTRACT_CALLER']
         self.block_cache_size = 360
         self.block_cache_limit = 720
         self.load_block_cache()
@@ -89,6 +91,25 @@ class ContractHistory():
         return ret
 
 
+    def exchange_person_orders(self, block_num):
+        updated_contracts = ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).all()
+        for contract in updated_contracts:
+            ret = self.http_request("invoke_contract_offline",
+                    [self.contract_caller, contract.contract_address, "sell_orders", ""])
+            result = json.loads(ret)
+            if isinstance(result, dict):
+                ContractPersonExchangeOrder.query.filter_by(contract_address=contract.contract_address).delete()
+                for k, v in result.items():
+                    [from_asset, to_asset] = k.split(',')
+                    order_info = json.loads(v)
+                    for o in order_info['orderArray']:
+                        [from_supply, to_supply, price] = o.split(',')
+                        self.db.session.add(ContractPersonExchangeOrder(from_asset=from_asset, to_asset=to_asset, \
+                                from_supply=from_supply, to_supply=to_supply, price=price, \
+                                contract_address=contract.contract_address))
+        self.db.session.commit()
+
+
     def get_contract_invoke_object(self, op, txid, block):
         invoke_obj = self.http_request('get_contract_invoke_object', [txid])
         if len(invoke_obj) <= 0:
@@ -103,7 +124,7 @@ class ContractHistory():
                     contract_type = 'sto'
                 elif abi == ContractHistory.EXCHANGE_PAIR_TYPE_ABI:
                     contract_type = 'exchange_pair'
-                elif abi == ContractHistory.EXCHANGE_PERSONAL_TYPE_ABI:
+                elif abi == ContractHistory.EXCHANGE_PERSON_TYPE_ABI:
                     contract_type = 'exchange_personal'
                 elif abi == ContractHistory.EXCHANGE_TYPE_ABI:
                     contract_type = 'exchange'
@@ -134,7 +155,7 @@ class ContractHistory():
                     elif contract_type == 'exchange_personal':
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
                                 event_arg=e['event_arg'], block_num=e['block_num'], op_num=e['op_num'], contract_address=e['contract_address'], \
-                                timestamp=block['timestamp']))
+                                timestamp=block['timestamp'], tx_id=txid))
 
 
     def scan_block(self, fromBlock=0, max=0):
@@ -152,6 +173,7 @@ class ContractHistory():
             info = self.get_info_result()
             maxBlockNum = int(info['head_block_num'])
         self.clear_dirty_data(fromBlockNum)
+        lastBlockNumBeforeCommit = fromBlockNum
         for i in range(fromBlockNum, maxBlockNum):
             block = self.http_request('get_block', [i])
             if block is None:
@@ -161,11 +183,6 @@ class ContractHistory():
             self.db.session.add(BlockRawHistory(block_num=block['number'], block_id=block['block_id'], prev_id=block['previous'], \
                     timestamp=block['timestamp'], trxfee=block['trxfee'], miner=block['miner'], next_secret_hash=block['next_secret_hash'], \
                     previous_secret=block['previous_secret'], reward=block['reward'], signing_key=block['signing_key']))
-            if i % 1000 == 0:
-                logging.info("Block height: %d, miner: %s, tx_count: %d" % (block['number'], block['miner'], len(block['transactions'])))
-                ServiceConfig.query.filter_by(key='scan_block').delete()
-                self.db.session.add(ServiceConfig(key='scan_block', value=str(i)))
-                self.db.session.commit()
             if len(block['transactions']) > 0:
                 tx_count = 0
                 tx_prefix = str(i)+'|'+block['transaction_ids'][tx_count]
@@ -205,6 +222,13 @@ class ContractHistory():
                         self.get_contract_invoke_object(op, block['transaction_ids'][tx_count], block)
                         op_count += 1
                     tx_count += 1
+            if i % 1024 == 0:
+                logging.info("Block height: %d, miner: %s, tx_count: %d" % (block['number'], block['miner'], len(block['transactions'])))
+                self.exchange_person_orders(lastBlockNumBeforeCommit)
+                ServiceConfig.query.filter_by(key='scan_block').delete()
+                self.db.session.add(ServiceConfig(key='scan_block', value=str(i)))
+                self.db.session.commit()
+                lastBlockNumBeforeCommit = i
         ServiceConfig.query.filter_by(key='scan_block').delete()
         self.db.session.add(ServiceConfig(key='scan_block', value=str(maxBlockNum-1)))
         self.db.session.commit()
