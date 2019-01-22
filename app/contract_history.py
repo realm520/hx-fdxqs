@@ -75,20 +75,29 @@ class ContractHistory():
 
     #TODO, fork process
     def check_fork(self, block):
-        ret = False
         if len(self.block_cache) == 0:
             self.block_cache = [{'number': block['number'], 'block_id': block['block_id'], 'previous': block['previous']}]
-            return ret
+            return False
         # process fork, rollback to fork block
-        for i in range(0, len(self.block_cache)):
-            if self.block_cache[i] == block['previous']:
-                self.block_cache = [{'number': block['number'], 'block_id': block['block_id'], 'previous': block['previous']}] + self.block_cache[i:]
-                ret = True
-                break
+        if self.block_cache[0]['block_id'] == block['previous'] and self.block_cache[0]['number'] == block['number']-1:
+            self.block_cache = [{'number': block['number'], 'block_id': block['block_id'], 'previous': block['previous']}] + self.block_cache
+        else:
+            rollback_block_num = 0
+            for i in range(0, len(self.block_cache)):
+                block = self.http_request('get_block', [self.block_cache[i]['number']])
+                if block['block_id'] == self.block_cache[i]['block_id']:
+                    rollback_block_num = block['number']
+                    break
+            if rollback_block_num > 0:
+                logging.warn('Fork from %d, set back block number and return [True].' % rollback_block_num)
+                ServiceConfig.query.filter_by(key='scan_block').delete()
+                self.db.session.add(ServiceConfig(key='scan_block', value=str(rollback_block_num)))
+                self.db.session.commit()
+                return True
         # cut size to 360
         if len(self.block_cache) > self.block_cache_limit:
             self.block_cache = self.block_cache[:self.block_cache_size]
-        return ret
+        return False
 
 
     def exchange_person_orders(self, block_num):
@@ -179,7 +188,8 @@ class ContractHistory():
             if block is None:
                 logging.error("block %d is not fetched" % i)
                 continue
-            # self.check_fork(block)
+            if self.check_fork(block):
+                return
             self.db.session.add(BlockRawHistory(block_num=block['number'], block_id=block['block_id'], prev_id=block['previous'], \
                     timestamp=block['timestamp'], trxfee=block['trxfee'], miner=block['miner'], next_secret_hash=block['next_secret_hash'], \
                     previous_secret=block['previous_secret'], reward=block['reward'], signing_key=block['signing_key']))
