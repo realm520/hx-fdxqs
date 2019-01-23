@@ -153,17 +153,17 @@ class ContractHistory():
                         order = json.loads(e['event_arg'])
                         for buys in order['transactionBuys']:
                             items = buys.split(',')
-                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
-                                    quote_amount=items[7], ex_type='buy', ex_pair=order['exchangPair'], block_num=block['number'], \
+                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
+                                    quote_amount=int(items[7]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
                         for sells in order['transactionSells']:
                             items = sells.split(',')
-                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=items[6], \
-                                    quote_amount=items[7], ex_type='sell', ex_pair=order['exchangPair'], block_num=block['number'], \
+                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
+                                    quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
                     elif contract_type == 'exchange_personal':
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
-                                event_arg=e['event_arg'], block_num=e['block_num'], op_num=e['op_num'], contract_address=e['contract_address'], \
+                                event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \
                                 timestamp=block['timestamp'], tx_id=txid))
 
 

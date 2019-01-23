@@ -76,8 +76,8 @@ class TxContractDealHistory(db.Model):
     address = db.Column(db.String(64), index=True)
     tx_id = db.Column(db.String(64), index=True)
     match_tx_id = db.Column(db.String(64), index=True)
-    base_amount = db.Column(db.Integer)
-    quote_amount = db.Column(db.Integer)
+    base_amount = db.Column(db.DECIMAL(36, 0))
+    quote_amount = db.Column(db.DECIMAL(36, 0))
     ex_type = db.Column(db.String(8))
     ex_pair = db.Column(db.String(64), index=True)
     block_num = db.Column(db.Integer)
@@ -124,8 +124,8 @@ class ContractPersonExchangeOrder(db.Model):
     contract_address = db.Column(db.String(64), index=True)
     from_asset = db.Column(db.String(64))
     to_asset = db.Column(db.String(64))
-    from_supply = db.Column(db.Integer)
-    to_supply = db.Column(db.Integer)
+    from_supply = db.Column(db.DECIMAL(36, 0))
+    to_supply = db.Column(db.DECIMAL(36, 0))
     price = db.Column(db.String(64), index=True)
 
     def __init__(self, **kwargs):
