@@ -122,8 +122,8 @@ class ContractPersonExchangeOrder(db.Model):
     __tablename__ = 'contract_person_exchange_order'
     id = db.Column(db.Integer, primary_key=True)
     contract_address = db.Column(db.String(64), index=True)
-    from_asset = db.Column(db.Integer)
-    to_asset = db.Column(db.Integer)
+    from_asset = db.Column(db.String(64))
+    to_asset = db.Column(db.String(64))
     from_supply = db.Column(db.Integer)
     to_supply = db.Column(db.Integer)
     price = db.Column(db.String(64), index=True)
