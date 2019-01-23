@@ -54,7 +54,7 @@ class ContractInfo(db.Model):
     abi = db.Column(db.Text)
     offline_abi = db.Column(db.Text)
     code_hash = db.Column(db.String(64))
-    contract_type = db.Column(db.String(8))
+    contract_type = db.Column(db.String(64))
     block_num = db.Column(db.Integer)
     timestamp = db.Column(db.String(64))
 
