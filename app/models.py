@@ -95,6 +95,72 @@ class TxContractDealHistory(db.Model):
                 "timestamp": self.timestamp}
 
 
+class TxContractDealKdataDaily(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_daily'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.DECIMAL(36, 10))
+    k_close = db.Column(db.DECIMAL(36, 10))
+    k_low = db.Column(db.DECIMAL(36, 10))
+    k_high = db.Column(db.DECIMAL(36, 10))
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdataDaily, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdataDaily %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, \
+                "timestamp": self.timestamp}
+
+
+class TxContractDealKdataHourly(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_hourly'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.DECIMAL(36, 10))
+    k_close = db.Column(db.DECIMAL(36, 10))
+    k_low = db.Column(db.DECIMAL(36, 10))
+    k_high = db.Column(db.DECIMAL(36, 10))
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdataHourly, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdataHourly %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, \
+                "timestamp": self.timestamp}
+
+
+class TxContractDealKdataWeekly(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_weekly'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.DECIMAL(36, 10))
+    k_close = db.Column(db.DECIMAL(36, 10))
+    k_low = db.Column(db.DECIMAL(36, 10))
+    k_high = db.Column(db.DECIMAL(36, 10))
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdataWeekly, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdataWeekly %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, \
+                "timestamp": self.timestamp}
+
+
 class ContractPersonExchangeEvent(db.Model):
     __tablename__ = 'contract_person_exchange_event'
     id = db.Column(db.Integer, primary_key=True)

@@ -6,7 +6,8 @@ import requests
 import logging
 from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
-        ContractPersonExchangeOrder
+        ContractPersonExchangeOrder, TxContractDealKdataDaily, TxContractDealKdataHourly, \
+        TxContractDealKdataWeekly
 
 
 class ContractHistory():
@@ -71,6 +72,9 @@ class ContractHistory():
         TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
+        TxContractDealKdataHourly.query.filter(TxContractDealKdataHourly.block_num>=block_num).delete()
+        TxContractDealKdataDaily.query.filter(TxContractDealKdataDaily.block_num>=block_num).delete()
+        TxContractDealKdataWeekly.query.filter(TxContractDealKdataWeekly.block_num>=block_num).delete()
 
 
     #TODO, fork process
