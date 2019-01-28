@@ -8,6 +8,7 @@ from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, TxContractDealKdataDaily, TxContractDealKdataHourly, \
         TxContractDealKdataWeekly
+from sqlalchemy import func
 
 
 class ContractHistory():
@@ -171,6 +172,31 @@ class ContractHistory():
                                 timestamp=block['timestamp'], tx_id=txid))
 
 
+    def process_kline_data(self, fromBlock):
+        block_num = fromBlock - fromBlock % 720
+        data = TxContractDealHistory.query().\
+                filter(TxContractDealHistory.block_num>=block_num).order_by(TxContractDealHistory.block_num).all()
+        k_open = None
+        k_low = None
+        k_high = None
+        for d in data:
+            price = d.base_amount / d.quote_amount
+            if k_open is None:
+                k_open = price
+                block_open = d.block_num
+                timestamp = d.timestamp
+            if k_low is None or k_low > price:
+                k_low = price
+            if k_high is None or k_high < price:
+                k_high = price
+            if d.block_num % 720 == 719:
+                self.db.session.add(TxContractDealKdataHourly(k_open=k_open, k_close=price, \
+                        k_high=k_high, k_low=k_low, block_num=block_open, timestamp=timestamp))
+                k_open = None
+                k_low = None
+                k_high = None
+
+
     def scan_block(self, fromBlock=0, max=0):
         if fromBlock > 0:
             fromBlockNum = fromBlock
@@ -246,4 +272,5 @@ class ContractHistory():
         ServiceConfig.query.filter_by(key='scan_block').delete()
         self.db.session.add(ServiceConfig(key='scan_block', value=str(maxBlockNum-1)))
         self.db.session.commit()
+        logging.info("Scan block from %d to %d complete." % (fromBlockNum, maxBlockNum))
 
