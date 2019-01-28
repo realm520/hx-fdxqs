@@ -45,6 +45,28 @@ class TxContractEventHistory(db.Model):
         return '<TxContractEventHistory %r>' % self.tx_id
 
 
+class AccountInfo(db.Model):
+    __tablename__ = 'account_info'
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.String(64))
+    name = db.Column(db.String(64), index=True)
+    user_id = db.Column(db.String(64), index=True)
+    address = db.Column(db.String(64), index=True)
+    amount = db.Column(db.DECIMAL(36, 0))
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(AccountInfo, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<AccountInfo %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"tx_id": self.tx_id, "name": self.name, "address": self.address, "user_id": self.user_id, \
+                "amount": self.amount, "block_num": self.block_num, "timestamp": self.timestamp}
+
+
 class ContractInfo(db.Model):
     __tablename__ = 'contract_info'
     id = db.Column(db.Integer, primary_key=True)
@@ -68,6 +90,33 @@ class ContractInfo(db.Model):
         return {"invoker": self.invoker, "contract_id": self.contract_id, "tx_id": self.tx_id, \
                 "contract_type": self.contract_type, "quote_amount": self.quote_amount, \
                 "block_num": self.block_num, "timestamp": self.timestamp}
+
+
+class CrossChainAssetInOut(db.Model):
+    __tablename__ = 'cross_chain_asset_in_out'
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.String(64))
+    cross_chain_tx_id = db.Column(db.String(64))
+    cross_chain_from = db.Column(db.String(64))
+    cross_chain_to = db.Column(db.String(64))
+    cross_chain_block_num = db.Column(db.Integer)
+    amount = db.Column(db.DECIMAL(36, 0))
+    asset_id = db.Column(db.String(64))
+    asset_symbol = db.Column(db.String(64))
+    deposit_address = db.Column(db.String(64))
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(CrossChainAssetInOut, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<CrossChainAssetInOut %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"tx_id": self.tx_id, "cross_chain_tx_id": self.cross_chain_tx_id, "cross_chain_from": self.cross_chain_from, \
+                "cross_chain_to": self.cross_chain_to, "asset_id": self.asset_id, "asset_symbol": self.asset_symbol, \
+                "deposit_address": self.deposit_address, "amount": self.amount, "block_num": self.block_num, "timestamp": self.timestamp}
 
 
 class TxContractDealHistory(db.Model):

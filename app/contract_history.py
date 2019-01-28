@@ -7,14 +7,17 @@ import logging
 from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, TxContractDealKdataDaily, TxContractDealKdataHourly, \
-        TxContractDealKdataWeekly
+        TxContractDealKdataWeekly, AccountInfo, CrossChainAssetInOut
 from sqlalchemy import func
 
 
 class ContractHistory():
+    OP_TYPE_REGISTER_ACCOUNT = 5
+    OP_TYPE_CROSSCHAIN_DEPOSIT = 60
     OP_TYPE_CONTRACT_REGISTER = 76
     OP_TYPE_CONTRACT_UPGRADE = 77
     OP_TYPE_CONTRACT_INVOKE = 79
+    OP_TYPE_CONTRACT_TRANSFER = 81
     EXCHANGE_PERSON_TYPE_ABI = r'["cancelAllOrder", "cancelSellOrder", "cancelSellOrderPair", "close", "init", "on_deposit_asset", "on_destroy", "putOnSellOrder", "withdrawAll", "withdrawAsset", "withrawRemainAsset"]'
     EXCHANGE_PAIR_TYPE_ABI = r'["cancelBuyOrder", "cancelSellOrder", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "testtable"]'
     EXCHANGE_TYPE_ABI = r'["cancelChangeAdminProposal", "cancelOrder", "cancelRegisterExchangePairProposal", "cancelUnboundExchangePairProposal", "freezeExchangePair", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "submitChangeAdminProposal", "submitRegisterExchangePairProposal", "submitUnboundExchangePairProposal", "unfreezeExchangePair", "unlockUserOffPairBalance", "voteChangeAdminProposal", "voteRegisterExchangePairProposal", "voteUnboundExchangePairProposal", "withdraw"]'
@@ -251,10 +254,27 @@ class ContractHistory():
                             self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, tx_type='storage_operation', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == 81: # transfer_contract_operation
+                        elif op[0] == ContractHistory.OP_TYPE_CONTRACT_TRANSFER:
                             self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, tx_type='transfer_contract_operation', tx_json=json.dumps(op[1])))
                             logging.debug(tx_prefix+','+str(op))
+                        elif op[0] == ContractHistory.OP_TYPE_REGISTER_ACCOUNT:
+                            self.db.session.add(AccountInfo(block_num=i, tx_id=block['transaction_ids'][tx_count], \
+                                    name=op[1]['name'], address=op[1]['payer'], amount=float(op[1]['fee']['amount']), \
+                                    user_id=t['operation_results'][0][1], timestamp=block['timestamp']))
+                            logging.debug(tx_prefix+','+str(op))
+                            is_contract_type = False
+                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_DEPOSIT:
+                            self.db.session.add(CrossChainAssetInOut(block_num=i, tx_id=block['transaction_ids'][tx_count], \
+                                    cross_chain_tx_id=op[1]['cross_chain_trx']['trx_id'], \
+                                    cross_chain_from=op[1]['cross_chain_trx']['from_account'], \
+                                    cross_chain_to=op[1]['cross_chain_trx']['to_account'], \
+                                    cross_chain_block_num=int(op[1]['cross_chain_trx']['block_num']), \
+                                    amount=float(op[1]['cross_chain_trx']['amount']), asset_symbol=op[1]['asset_symbol'], \
+                                    asset_id=op[1]['asset_id'], deposit_address=op[1]['deposit_address'], \
+                                    timestamp=block['timestamp']))
+                            logging.debug(tx_prefix+','+str(op))
+                            is_contract_type = False
                         else:
                             is_contract_type = False
                             logging.debug('Not processed: '+json.dumps(op[0]))

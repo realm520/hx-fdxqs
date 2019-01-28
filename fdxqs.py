@@ -5,7 +5,7 @@ from app import create_app, db
 from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
         ContractPersonExchangeEvent, TxContractDealKdataHourly, TxContractDealKdataDaily, \
-        TxContractDealKdataWeekly
+        TxContractDealKdataWeekly, AccountInfo
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -107,6 +107,7 @@ def dropdb():
     TxContractDealKdataHourly.query.delete()
     TxContractDealKdataDaily.query.delete()
     TxContractDealKdataWeekly.query.delete()
+    AccountInfo.query.delete()
     print("clear db finished")
 
 
