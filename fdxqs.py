@@ -117,10 +117,16 @@ def rpc_test(method, args):
 
 
 @app.cli.command('scan_block')
-def scan_block():
+@click.option('--times', default=1, type=int, help='scan times')
+def scan_block(times):
     from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
-    ch.scan_block()
+    total = 0
+    import time
+    while total < times or times <= 0:
+        ch.scan_block()
+        time.sleep(5)
+        total += 1
     print("scan block finished")
 
 
