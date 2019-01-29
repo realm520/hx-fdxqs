@@ -14,6 +14,10 @@ from sqlalchemy import func
 class ContractHistory():
     OP_TYPE_REGISTER_ACCOUNT = 5
     OP_TYPE_CROSSCHAIN_DEPOSIT = 60
+    OP_TYPE_CROSSCHAIN_WITHDRAW = 61
+    OP_TYPE_CROSSCHAIN_WITHDRAW_SIGN = 62
+    OP_TYPE_CROSSCHAIN_WITHDRAW_COMBINE = 64
+    OP_TYPE_CROSSCHAIN_WITHDRAW_RESULT = 65
     OP_TYPE_CONTRACT_REGISTER = 76
     OP_TYPE_CONTRACT_UPGRADE = 77
     OP_TYPE_CONTRACT_INVOKE = 79
@@ -232,38 +236,19 @@ class ContractHistory():
                 for t in block['transactions']:
                     op_count = 0
                     for op in t['operations']:
-                        is_contract_type = True
-                        if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER:
-                            op[1]['contract_code']['code'] = None
+                        logging.debug(tx_prefix+','+str(op))
+                        if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER or op[0] == ContractHistory.OP_TYPE_CONTRACT_UPGRADE \
+                                or op[0] == 78 or op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE or op[0] == 80 \
+                                or op[0] == ContractHistory.OP_TYPE_CONTRACT_TRANSFER:
+                            if op[1].has_key('contract_code'):
+                                op[1]['contract_code']['code'] = None
                             self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='contract_register', tx_json=json.dumps(op[1])))
-                            logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == ContractHistory.OP_TYPE_CONTRACT_UPGRADE:
-                            self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='contract_upgrade', tx_json=json.dumps(op[1])))
-                            logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == 78: # native_contract_register_operation
-                            self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='native_contract_register', tx_json=json.dumps(op[1])))
-                            logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
-                            self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='contract_invoke_operation', tx_json=json.dumps(op[1])))
-                            logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == 80: # storage_operation
-                            self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='storage_operation', tx_json=json.dumps(op[1])))
-                            logging.debug(tx_prefix+','+str(op))
-                        elif op[0] == ContractHistory.OP_TYPE_CONTRACT_TRANSFER:
-                            self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    op_seq=op_count, tx_type='transfer_contract_operation', tx_json=json.dumps(op[1])))
-                            logging.debug(tx_prefix+','+str(op))
+                                    op_seq=op_count, op_type=op[0], tx_json=json.dumps(op[1])))
+                            self.get_contract_invoke_object(op, block['transaction_ids'][tx_count], block)
                         elif op[0] == ContractHistory.OP_TYPE_REGISTER_ACCOUNT:
                             self.db.session.add(AccountInfo(block_num=i, tx_id=block['transaction_ids'][tx_count], \
                                     name=op[1]['name'], address=op[1]['payer'], amount=float(op[1]['fee']['amount']), \
                                     user_id=t['operation_results'][0][1], timestamp=block['timestamp']))
-                            logging.debug(tx_prefix+','+str(op))
-                            is_contract_type = False
                         elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_DEPOSIT:
                             self.db.session.add(CrossChainAssetInOut(block_num=i, tx_id=block['transaction_ids'][tx_count], \
                                     cross_chain_tx_id=op[1]['cross_chain_trx']['trx_id'], \
@@ -271,15 +256,35 @@ class ContractHistory():
                                     cross_chain_to=op[1]['cross_chain_trx']['to_account'], \
                                     cross_chain_block_num=int(op[1]['cross_chain_trx']['block_num']), \
                                     amount=float(op[1]['cross_chain_trx']['amount']), asset_symbol=op[1]['asset_symbol'], \
-                                    asset_id=op[1]['asset_id'], deposit_address=op[1]['deposit_address'], \
+                                    asset_id=op[1]['asset_id'], hx_address=op[1]['deposit_address'], \
                                     timestamp=block['timestamp']))
-                            logging.debug(tx_prefix+','+str(op))
-                            is_contract_type = False
+                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW:
+                            self.db.session.add(CrossChainAssetInOut(block_num=i, tx_id=block['transaction_ids'][tx_count], \
+                                    cross_chain_to=op[1]['crosschain_account'], asset_symbol=op[1]['asset_symbol'], \
+                                    asset_id=op[1]['asset_id'], hx_address=op[1]['withdraw_account'], \
+                                    timestamp=block['timestamp']))
+                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_SIGN:
+                            for wid in op[1]['ccw_trx_ids']:
+                                withdraw_record = CrossChainAssetInOut.query.filter_by(tx_id=wid).first()
+                                if withdraw_record is None:
+                                    logging.error('Not found withdraw tx id: %s' % wid)
+                                    continue
+                                withdraw_record.sign_tx_id = block['transaction_ids'][tx_count]
+                                self.db.session.add(withdraw_record)
+                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_COMBINE:
+                            withdraw_record = CrossChainAssetInOut.query.filter_by(sign_tx_id=op[1]['withdraw_trx']).first()
+                            withdraw_record.cross_chain_tx_id = op[1]['crosschain_trx_id']
+                            withdraw_record.combine_tx_id = block['transaction_ids'][tx_count]
+                            self.db.session.add(withdraw_record)
+                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_RESULT:
+                            withdraw_record = CrossChainAssetInOut.query.\
+                                    filter_by(cross_chain_tx_id=op[1]['cross_chain_trx']['trx_id']).first()
+                            withdraw_record.cross_chain_from = op[1]['cross_chain_trx']['from_account']
+                            withdraw_record.cross_chain_block_num = op[1]['cross_chain_trx']['block_num']
+                            withdraw_record.amount = -1 * float(op[1]['cross_chain_trx']['amount'])
+                            self.db.session.add(withdraw_record)
                         else:
-                            is_contract_type = False
                             logging.debug('Not processed: '+json.dumps(op[0]))
-                    if is_contract_type:
-                        self.get_contract_invoke_object(op, block['transaction_ids'][tx_count], block)
                         op_count += 1
                     tx_count += 1
             if i % 1024 == 0:

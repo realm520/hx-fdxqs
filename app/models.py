@@ -21,7 +21,7 @@ class TxContractRawHistory(db.Model):
     block_num = db.Column(db.Integer)
     tx_id = db.Column(db.String(64), index=True)
     op_seq = db.Column(db.Integer)
-    tx_type = db.Column(db.String(64))
+    op_type = db.Column(db.Integer)
     tx_json = db.Column(db.Text)
 
     def __init__(self, **kwargs):
@@ -94,16 +94,18 @@ class ContractInfo(db.Model):
 
 class CrossChainAssetInOut(db.Model):
     __tablename__ = 'cross_chain_asset_in_out'
-    id = db.Column(db.Integer, primary_key=True)
-    tx_id = db.Column(db.String(64))
-    cross_chain_tx_id = db.Column(db.String(64))
-    cross_chain_from = db.Column(db.String(64))
-    cross_chain_to = db.Column(db.String(64))
-    cross_chain_block_num = db.Column(db.Integer)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    tx_id = db.Column(db.String(64), nullable=False, index=True)
+    sign_tx_id = db.Column(db.String(64), default='', index=True)
+    combine_tx_id = db.Column(db.String(64), default='')
+    cross_chain_tx_id = db.Column(db.String(64), default='')
+    cross_chain_from = db.Column(db.String(64), default='')
+    cross_chain_to = db.Column(db.String(64), default='')
+    cross_chain_block_num = db.Column(db.Integer, default=0)
     amount = db.Column(db.DECIMAL(36, 0))
     asset_id = db.Column(db.String(64))
     asset_symbol = db.Column(db.String(64))
-    deposit_address = db.Column(db.String(64))
+    hx_address = db.Column(db.String(64))
     block_num = db.Column(db.Integer)
     timestamp = db.Column(db.String(64))
 
@@ -114,9 +116,11 @@ class CrossChainAssetInOut(db.Model):
         return '<CrossChainAssetInOut %r>' % self.tx_id
     
     def toQueryObj(self):
-        return {"tx_id": self.tx_id, "cross_chain_tx_id": self.cross_chain_tx_id, "cross_chain_from": self.cross_chain_from, \
+        return {"tx_id": self.tx_id, "cross_chain_tx_id": self.cross_chain_tx_id, \
+                "cross_chain_from": self.cross_chain_from, "sign_tx_id": self.sign_tx_id, \
                 "cross_chain_to": self.cross_chain_to, "asset_id": self.asset_id, "asset_symbol": self.asset_symbol, \
-                "deposit_address": self.deposit_address, "amount": self.amount, "block_num": self.block_num, "timestamp": self.timestamp}
+                "deposit_address": self.deposit_address, "amount": self.amount, "block_num": self.block_num, \
+                "timestamp": self.timestamp, "combine_tx_id": self.combine_tx_id}
 
 
 class TxContractDealHistory(db.Model):
