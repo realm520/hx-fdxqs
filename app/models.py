@@ -255,7 +255,7 @@ class ContractPersonExchangeOrder(db.Model):
     
     def toQueryObj(self):
         return {"contract_address": self.contract_address, "from_asset": self.from_asset, "to_asset": self.to_asset, \
-                "from_supply": self.from_supply, "to_supply": self.to_supply, "price": self.price}
+                "from_supply": str(self.from_supply), "to_supply": str(self.to_supply), "price": self.price}
 
 
 class BlockRawHistory(db.Model):

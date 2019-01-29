@@ -18,6 +18,7 @@ class ContractHistory():
     OP_TYPE_CROSSCHAIN_WITHDRAW_SIGN = 62
     OP_TYPE_CROSSCHAIN_WITHDRAW_COMBINE = 64
     OP_TYPE_CROSSCHAIN_WITHDRAW_RESULT = 65
+    # OP_TYPE_CROSSCHAIN_WITHDRAW_COMBINE_ETH = 98
     OP_TYPE_CONTRACT_REGISTER = 76
     OP_TYPE_CONTRACT_UPGRADE = 77
     OP_TYPE_CONTRACT_INVOKE = 79
@@ -234,6 +235,7 @@ class ContractHistory():
                 tx_count = 0
                 tx_prefix = str(i)+'|'+block['transaction_ids'][tx_count]
                 for t in block['transactions']:
+                    # print(tx_prefix)
                     op_count = 0
                     for op in t['operations']:
                         logging.debug(tx_prefix+','+str(op))
@@ -258,31 +260,45 @@ class ContractHistory():
                                     amount=float(op[1]['cross_chain_trx']['amount']), asset_symbol=op[1]['asset_symbol'], \
                                     asset_id=op[1]['asset_id'], hx_address=op[1]['deposit_address'], \
                                     timestamp=block['timestamp']))
-                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW:
-                            self.db.session.add(CrossChainAssetInOut(block_num=i, tx_id=block['transaction_ids'][tx_count], \
-                                    cross_chain_to=op[1]['crosschain_account'], asset_symbol=op[1]['asset_symbol'], \
-                                    asset_id=op[1]['asset_id'], hx_address=op[1]['withdraw_account'], \
-                                    timestamp=block['timestamp']))
-                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_SIGN:
-                            for wid in op[1]['ccw_trx_ids']:
-                                withdraw_record = CrossChainAssetInOut.query.filter_by(tx_id=wid).first()
-                                if withdraw_record is None:
-                                    logging.error('Not found withdraw tx id: %s' % wid)
-                                    continue
-                                withdraw_record.sign_tx_id = block['transaction_ids'][tx_count]
+                            '''
+                            # record tx_id of op_61, check tx_id of op_62.ccw_trx_ids, check tx_id of op_64.crosschain_trx_id(ETH is different, combined with contract_id and msg_prefix), check tx_id of op_65.['cross_chain_trx']['trx_id']
+                            elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW:
+                                print('61'+block['transaction_ids'][tx_count])
+                                self.db.session.add(CrossChainAssetInOut(block_num=i, tx_id=block['transaction_ids'][tx_count], \
+                                        cross_chain_to=op[1]['crosschain_account'], asset_symbol=op[1]['asset_symbol'], \
+                                        asset_id=op[1]['asset_id'], hx_address=op[1]['withdraw_account'], \
+                                        timestamp=block['timestamp']))
+                            elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_SIGN:
+                                for wid in op[1]['ccw_trx_ids']:
+                                    print('62'+block['transaction_ids'][tx_count]+'|'+wid)
+                                    withdraw_record = CrossChainAssetInOut.query.filter_by(tx_id=wid).first()
+                                    if withdraw_record is None:
+                                        logging.error('Not found withdraw tx id: %s' % wid)
+                                        continue
+                                    withdraw_record.sign_tx_id = block['transaction_ids'][tx_count]
+                                    self.db.session.add(withdraw_record)
+                            elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_COMBINE:
+                                print('64'+block['transaction_ids'][tx_count]+'|'+op[1]['withdraw_trx'])
+                                withdraw_record = CrossChainAssetInOut.query.filter_by(sign_tx_id=op[1]['withdraw_trx']).first()
+                                if withdraw_record.asset_symbol == 'ETH' or withdraw_record.asset_symbol.find('ERC') == 0:
+                                    withdraw_record.cross_chain_tx_id = op[1]['crosschain_trx_id']['source_trx']['contract_addr']\
+                                            +'|'+op[1]['crosschain_trx_id']['source_trx']['msg_prefix']
+                                else:
+                                    withdraw_record.cross_chain_tx_id = op[1]['crosschain_trx_id']
+                                withdraw_record.combine_tx_id = block['transaction_ids'][tx_count]
                                 self.db.session.add(withdraw_record)
-                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_COMBINE:
-                            withdraw_record = CrossChainAssetInOut.query.filter_by(sign_tx_id=op[1]['withdraw_trx']).first()
-                            withdraw_record.cross_chain_tx_id = op[1]['crosschain_trx_id']
-                            withdraw_record.combine_tx_id = block['transaction_ids'][tx_count]
-                            self.db.session.add(withdraw_record)
-                        elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_RESULT:
-                            withdraw_record = CrossChainAssetInOut.query.\
-                                    filter_by(cross_chain_tx_id=op[1]['cross_chain_trx']['trx_id']).first()
-                            withdraw_record.cross_chain_from = op[1]['cross_chain_trx']['from_account']
-                            withdraw_record.cross_chain_block_num = op[1]['cross_chain_trx']['block_num']
-                            withdraw_record.amount = -1 * float(op[1]['cross_chain_trx']['amount'])
-                            self.db.session.add(withdraw_record)
+                            elif op[0] == ContractHistory.OP_TYPE_CROSSCHAIN_WITHDRAW_RESULT:
+                                asset_symbol = op[1]['cross_chain_trx']['asset_symbol']
+                                combine_trx_id = op[1]['cross_chain_trx']['trx_id']
+                                if asset_symbol == 'ETH' or asset_symbol.find('ERC') == 0:
+                                    combine_trx_id = combine_trx_id[combine_trx_id.find('|')+1:]
+                                withdraw_record = CrossChainAssetInOut.query.\
+                                        filter_by(cross_chain_tx_id=combine_trx_id).first()
+                                withdraw_record.cross_chain_from = op[1]['cross_chain_trx']['from_account']
+                                withdraw_record.cross_chain_block_num = op[1]['cross_chain_trx']['block_num']
+                                withdraw_record.amount = -1 * float(op[1]['cross_chain_trx']['amount'])
+                                self.db.session.add(withdraw_record)
+                            '''
                         else:
                             logging.debug('Not processed: '+json.dumps(op[0]))
                         op_count += 1
