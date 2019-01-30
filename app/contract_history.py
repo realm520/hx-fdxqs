@@ -4,10 +4,12 @@ import sqlite3
 import json
 import requests
 import logging
+import datetime
 from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, TxContractDealKdataDaily, TxContractDealKdataHourly, \
-        TxContractDealKdataWeekly, AccountInfo, CrossChainAssetInOut
+        TxContractDealKdataWeekly, AccountInfo, CrossChainAssetInOut, TxContractDealTick
+from app.k_line_obj import KLine1MinObj
 from sqlalchemy import func
 
 
@@ -24,8 +26,8 @@ class ContractHistory():
     OP_TYPE_CONTRACT_INVOKE = 79
     OP_TYPE_CONTRACT_TRANSFER = 81
     EXCHANGE_PERSON_TYPE_ABI = r'["cancelAllOrder", "cancelSellOrder", "cancelSellOrderPair", "close", "init", "on_deposit_asset", "on_destroy", "putOnSellOrder", "withdrawAll", "withdrawAsset", "withrawRemainAsset"]'
-    EXCHANGE_PAIR_TYPE_ABI = r'["cancelBuyOrder", "cancelSellOrder", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "testtable"]'
-    EXCHANGE_TYPE_ABI = r'["cancelChangeAdminProposal", "cancelOrder", "cancelRegisterExchangePairProposal", "cancelUnboundExchangePairProposal", "freezeExchangePair", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "submitChangeAdminProposal", "submitRegisterExchangePairProposal", "submitUnboundExchangePairProposal", "unfreezeExchangePair", "unlockUserOffPairBalance", "voteChangeAdminProposal", "voteRegisterExchangePairProposal", "voteUnboundExchangePairProposal", "withdraw"]'
+    EXCHANGE_PAIR_TYPE_ABI = r'["buySlot", "buySlotsInfo", "buy_orders_num", "getBuyOrders", "getInfo", "getSellOrders", "getUserBuyOrders", "getUserBuyOrdersCount", "getUserSellOrders", "getUserSellOrdersCount", "sellSlot", "sellSlotsInfo", "sell_orders_num"]'
+    EXCHANGE_TYPE_ABI = r'["cancelChangeAdminProposal", "cancelOrder", "cancelRegisterExchangePairProposal", "cancelUnboundExchangePairProposal", "freezeExchangePair", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "setLeastOrderAmount", "setMAXCOUNTPERSLOT", "submitChangeAdminProposal", "submitRegisterExchangePairProposal", "submitUnboundExchangePairProposal", "unfreezeExchangePair", "unlockUserOffPairBalance", "voteChangeAdminProposal", "voteRegisterExchangePairProposal", "voteUnboundExchangePairProposal", "withdraw"]'
     STO_TYPE_ABI = r'["addCrowdfundingInfo", "adminWithdrawFund", "approve", "changeAdmin", "closeCrowdfunding", "deleteLastCrowdfundingInfo", "init", "init_config", "modifyLastCrowdfundingInfo", "on_deposit_asset", "on_destroy", "openCrowdfunding", "pause", "resume", "returnAllCrowdAssetBack", "stop", "transfer", "transferFrom", "userGetCrowdAssetBack", "withdrawBonuses"]'
 
 
@@ -58,9 +60,8 @@ class ContractHistory():
         }
         while True:
             try:
+                logging.debug("[HTTP POST] %s" % payload)
                 response = requests.request("POST", self.rpc_connect, data=payload, headers=headers)
-                #print type(response)
-                #print response.text
                 rep = response.json()
                 if "result" in rep:
                     return rep["result"]
@@ -174,35 +175,14 @@ class ContractHistory():
                             self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
+                        if order['totalExchangeBaseAmount'] > 0:
+                            self.db.session.add(TxContractDealTick(tx_id=txid, base_amount=int(order['totalExchangeBaseAmount']), \
+                                    quote_amount=int(order['totalExchangeQuoteAmount']), ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                    timestamp=block['timestamp']))
                     elif contract_type == 'exchange_personal':
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
                                 event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \
                                 timestamp=block['timestamp'], tx_id=txid))
-
-
-    def process_kline_data(self, fromBlock):
-        block_num = fromBlock - fromBlock % 720
-        data = TxContractDealHistory.query().\
-                filter(TxContractDealHistory.block_num>=block_num).order_by(TxContractDealHistory.block_num).all()
-        k_open = None
-        k_low = None
-        k_high = None
-        for d in data:
-            price = d.base_amount / d.quote_amount
-            if k_open is None:
-                k_open = price
-                block_open = d.block_num
-                timestamp = d.timestamp
-            if k_low is None or k_low > price:
-                k_low = price
-            if k_high is None or k_high < price:
-                k_high = price
-            if d.block_num % 720 == 719:
-                self.db.session.add(TxContractDealKdataHourly(k_open=k_open, k_close=price, \
-                        k_high=k_high, k_low=k_low, block_num=block_open, timestamp=timestamp))
-                k_open = None
-                k_low = None
-                k_high = None
 
 
     def scan_block(self, fromBlock=0, max=0):
@@ -228,6 +208,7 @@ class ContractHistory():
                 continue
             if self.check_fork(block):
                 return
+            block['timestamp'] = datetime.datetime.strptime(block['timestamp'], r"%Y-%m-%dT%H:%M:%S")
             self.db.session.add(BlockRawHistory(block_num=block['number'], block_id=block['block_id'], prev_id=block['previous'], \
                     timestamp=block['timestamp'], trxfee=block['trxfee'], miner=block['miner'], next_secret_hash=block['next_secret_hash'], \
                     previous_secret=block['previous_secret'], reward=block['reward'], signing_key=block['signing_key']))

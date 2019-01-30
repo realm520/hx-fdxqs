@@ -52,9 +52,9 @@ class AccountInfo(db.Model):
     name = db.Column(db.String(64), index=True)
     user_id = db.Column(db.String(64), index=True)
     address = db.Column(db.String(64), index=True)
-    amount = db.Column(db.DECIMAL(36, 0))
+    amount = db.Column(db.BigInteger)
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(AccountInfo, self).__init__(**kwargs)
@@ -78,7 +78,7 @@ class ContractInfo(db.Model):
     code_hash = db.Column(db.String(64))
     contract_type = db.Column(db.String(64))
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(ContractInfo, self).__init__(**kwargs)
@@ -102,12 +102,12 @@ class CrossChainAssetInOut(db.Model):
     cross_chain_from = db.Column(db.String(64), default='')
     cross_chain_to = db.Column(db.String(64), default='')
     cross_chain_block_num = db.Column(db.Integer, default=0)
-    amount = db.Column(db.DECIMAL(36, 0))
+    amount = db.Column(db.BigInteger)
     asset_id = db.Column(db.String(64))
     asset_symbol = db.Column(db.String(64))
     hx_address = db.Column(db.String(64))
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(CrossChainAssetInOut, self).__init__(**kwargs)
@@ -129,12 +129,12 @@ class TxContractDealHistory(db.Model):
     address = db.Column(db.String(64), index=True)
     tx_id = db.Column(db.String(64), index=True)
     match_tx_id = db.Column(db.String(64), index=True)
-    base_amount = db.Column(db.DECIMAL(36, 0))
-    quote_amount = db.Column(db.DECIMAL(36, 0))
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
     ex_type = db.Column(db.String(8))
     ex_pair = db.Column(db.String(64), index=True)
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(TxContractDealHistory, self).__init__(**kwargs)
@@ -148,15 +148,85 @@ class TxContractDealHistory(db.Model):
                 "timestamp": self.timestamp}
 
 
+class TxContractDealTick(db.Model):
+    __tablename__ = 'tx_contract_deal_tick'
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.String(64), index=True)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    ex_pair = db.Column(db.String(64), index=True)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealTick, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealTick %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"pair": self.ex_pair, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "block_num": self.block_num, \
+                "timestamp": self.timestamp}
+
+
+class TxContractDealKdata1Min(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_1min'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata1Min, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata1Min %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdata5Min(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_5min'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata5Min, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata5Min %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
 class TxContractDealKdataDaily(db.Model):
     __tablename__ = 'tx_contract_deal_kdata_daily'
     id = db.Column(db.Integer, primary_key=True)
-    k_open = db.Column(db.DECIMAL(36, 10))
-    k_close = db.Column(db.DECIMAL(36, 10))
-    k_low = db.Column(db.DECIMAL(36, 10))
-    k_high = db.Column(db.DECIMAL(36, 10))
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(TxContractDealKdataDaily, self).__init__(**kwargs)
@@ -173,12 +243,12 @@ class TxContractDealKdataDaily(db.Model):
 class TxContractDealKdataHourly(db.Model):
     __tablename__ = 'tx_contract_deal_kdata_hourly'
     id = db.Column(db.Integer, primary_key=True)
-    k_open = db.Column(db.DECIMAL(36, 10))
-    k_close = db.Column(db.DECIMAL(36, 10))
-    k_low = db.Column(db.DECIMAL(36, 10))
-    k_high = db.Column(db.DECIMAL(36, 10))
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(TxContractDealKdataHourly, self).__init__(**kwargs)
@@ -195,12 +265,12 @@ class TxContractDealKdataHourly(db.Model):
 class TxContractDealKdataWeekly(db.Model):
     __tablename__ = 'tx_contract_deal_kdata_weekly'
     id = db.Column(db.Integer, primary_key=True)
-    k_open = db.Column(db.DECIMAL(36, 10))
-    k_close = db.Column(db.DECIMAL(36, 10))
-    k_low = db.Column(db.DECIMAL(36, 10))
-    k_high = db.Column(db.DECIMAL(36, 10))
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(TxContractDealKdataWeekly, self).__init__(**kwargs)
@@ -224,7 +294,7 @@ class ContractPersonExchangeEvent(db.Model):
     event_arg = db.Column(db.Text)
     op_num = db.Column(db.Integer)
     block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(ContractPersonExchangeEvent, self).__init__(**kwargs)
@@ -243,8 +313,8 @@ class ContractPersonExchangeOrder(db.Model):
     contract_address = db.Column(db.String(64), index=True)
     from_asset = db.Column(db.String(64))
     to_asset = db.Column(db.String(64))
-    from_supply = db.Column(db.DECIMAL(36, 0))
-    to_supply = db.Column(db.DECIMAL(36, 0))
+    from_supply = db.Column(db.BigInteger)
+    to_supply = db.Column(db.BigInteger)
     price = db.Column(db.String(64), index=True)
 
     def __init__(self, **kwargs):
@@ -264,7 +334,7 @@ class BlockRawHistory(db.Model):
     block_num = db.Column(db.Integer)
     block_id = db.Column(db.String(64), index=True)
     prev_id = db.Column(db.String(64))
-    timestamp = db.Column(db.String(64))
+    timestamp = db.Column(db.DateTime)
     trxfee = db.Column(db.String(64))
     miner = db.Column(db.String(64))
     next_secret_hash = db.Column(db.String(64))

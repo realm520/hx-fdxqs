@@ -5,7 +5,10 @@ from app import create_app, db
 from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
         ContractPersonExchangeEvent, TxContractDealKdataHourly, TxContractDealKdataDaily, \
-        TxContractDealKdataWeekly, AccountInfo
+        TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
+from app.k_line_obj import KLine1MinObj
+from app.k_line_obj import KLine5MinObj
+from app.models import TxContractDealKdata5Min
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -108,6 +111,7 @@ def dropdb():
     TxContractDealKdataDaily.query.delete()
     TxContractDealKdataWeekly.query.delete()
     AccountInfo.query.delete()
+    TxContractDealKdata1Min.query.delete()
     print("clear db finished")
 
 
@@ -119,6 +123,29 @@ def rpc_test(method, args):
     ch = ContractHistory(app.config, db)
     rsp = ch.http_request(method, [args])
     print(str(rsp))
+
+
+@app.cli.command('update_kline')
+@click.option('--times', default=1, type=int, help='scan times')
+def update_kline(times):
+    # Process 1-minute K-Line
+    k = KLine1MinObj(None)
+    ticks = TxContractDealTick.query.order_by(TxContractDealTick.block_num).all()
+    for t in ticks:
+        k.process_tick(t)
+    for r in k.get_k_data():
+        db.session.add(TxContractDealKdata1Min(k_open=r['k_open'], k_close=r['k_close'], \
+                k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
+                block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
+    # Process 5-minutes K-Line
+    k = KLine5MinObj(None)
+    ticks = TxContractDealKdata1Min.query.order_by(TxContractDealKdata1Min.block_num).all()
+    for t in ticks:
+        k.process_tick(t)
+    for r in k.get_k_data():
+        db.session.add(TxContractDealKdata5Min(k_open=r['k_open'], k_close=r['k_close'], \
+                k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
+                block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
 
 
 @app.cli.command('scan_block')
