@@ -200,6 +200,7 @@ class ContractHistory():
             maxBlockNum = int(info['head_block_num'])
         self.clear_dirty_data(fromBlockNum)
         lastBlockNumBeforeCommit = fromBlockNum
+        logging.info("Scan block from [%d] to [%d]" % (fromBlockNum, maxBlockNum))
         for i in range(fromBlockNum, maxBlockNum):
             block = self.http_request('get_block', [i])
             if block is None:
