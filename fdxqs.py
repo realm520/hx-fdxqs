@@ -39,7 +39,7 @@ log_file_handler = TimedRotatingFileHandler(filename="hx_util_log", when="D", in
 #log_file_handler.suffix = "%Y-%m-%d_%H-%M.log"
 #log_file_handler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}.log$")
 log_file_handler.setFormatter(formatter)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
 log.addHandler(log_file_handler)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -67,10 +67,38 @@ def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
 @jsonrpc.method('hx.fdxqs.order.query(from_asset=str, to_asset=str, page=int, page_count=int)')
 def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
     logging.info('[hx.fdxqs.order.query] - from_asset: %s, to_asset: %s, page: %d, page_count: %d' % (from_asset, to_asset, page, page_count))
-
     data = ContractPersonExchangeOrder.query.filter_by(from_asset=from_asset, to_asset=to_asset).\
             order_by(ContractPersonExchangeOrder.price).paginate(page, page_count, False)
+    return {
+            'total_records': data.total,
+            'per_page': data.per_page,
+            'total_pages': data.pages,
+            'current_page': data.page,
+            'data': [t.toQueryObj() for t in data.items]
+        }
 
+
+@jsonrpc.method('hx.fdxqs.exchange.kline.query(pair=str, type=int, page=int, page_count=int)', validate=True)
+def exchange_bid_query(pair, type, page=1, page_count=10):
+    kline_data_list = [
+            TxContractDealKdata1Min, 
+            TxContractDealKdata5Min,
+            TxContractDealKdata15Min,
+            TxContractDealKdata30Min,
+            TxContractDealKdata1Hour,
+            TxContractDealKdata2Hour,
+            TxContractDealKdata6Hour,
+            TxContractDealKdata12Hour,
+            TxContractDealKdataDaily,
+            TxContractDealKdataWeekly,
+            TxContractDealKdataMonthly
+        ]
+    if type < 0 or type >= len(kline_data_list):
+        return {
+            'error': 'invalid [type]'
+        }
+    data = kline_data_list[type].query.filter_by(ex_pair=pair).\
+            order_by(kline_data_list[type].id).paginate(page, page_count, False)
     return {
             'total_records': data.total,
             'per_page': data.per_page,
@@ -81,12 +109,6 @@ def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
 
 
 '''
-@jsonrpc.method('hx.fdxqs.exchange.ask.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
-def exchange_bid_query(addr, pair, offset, limit):
-    #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
-    return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
-
-
 @jsonrpc.method('hx.fdxqs.exchange.cancel.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
 def exchange_cancel_query(addr, pair, offset, limit):
     #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
@@ -135,16 +157,21 @@ def rpc_test(method, args):
 @app.cli.command('update_kline')
 @click.option('--times', default=1, type=int, help='scan times')
 def update_kline(times):
-    def process_kline_common(base_table, target_table, process_obj):
-        k_last = target_table.query.order_by(target_table.block_num.desc()).first()
+    def process_kline_common(base_table, target_table, process_obj, pair='BTC/ETH'):
+        k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.block_num.desc()).first()
         k = process_obj(k_last)
-        ticks = base_table.query.order_by(base_table.id).all()
+        if k_last is None:
+            last_block_num = 0
+        else:
+            last_block_num = k_last.block_num
+        logging.info("%s: last block num: %d" % (str(target_table.__class__), last_block_num))
+        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.block_num>=last_block_num).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
         if k_last is not None:
             target_table.query.filter_by(block_num=k_last.block_num).delete()
         for r in k.get_k_data():
-            db.session.add(target_table(k_open=r['k_open'], k_close=r['k_close'], \
+            db.session.add(target_table(ex_pair=pair, k_open=r['k_open'], k_close=r['k_close'], \
                     k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
                     block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
 
@@ -163,7 +190,7 @@ def update_kline(times):
     # Process 6-hour K-Line
     process_kline_common(TxContractDealKdata1Hour, TxContractDealKdata6Hour, KLine6HourObj)
     # Process 12-hour K-Line
-    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdata6Hour, KLine12HourObj)
+    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdata12Hour, KLine12HourObj)
     # Process daily K-Line
     process_kline_common(TxContractDealKdata1Hour, TxContractDealKdataDaily, KLineDailyObj)
     # Process weekly K-Line
