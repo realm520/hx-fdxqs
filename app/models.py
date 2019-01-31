@@ -100,7 +100,7 @@ class CrossChainAssetInOut(db.Model):
     combine_tx_id = db.Column(db.String(64), default='')
     cross_chain_tx_id = db.Column(db.String(64), default='')
     cross_chain_from = db.Column(db.String(64), default='')
-    cross_chain_to = db.Column(db.String(64), default='')
+    cross_chain_to = db.Column(db.Text, default='')
     cross_chain_block_num = db.Column(db.Integer, default=0)
     amount = db.Column(db.BigInteger)
     asset_id = db.Column(db.String(64))
