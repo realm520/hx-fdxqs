@@ -7,7 +7,7 @@ import logging
 import datetime
 from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
-        ContractPersonExchangeOrder, TxContractDealKdataDaily, TxContractDealKdataHourly, \
+        ContractPersonExchangeOrder, TxContractDealKdataDaily, \
         TxContractDealKdataWeekly, AccountInfo, CrossChainAssetInOut, TxContractDealTick
 from app.k_line_obj import KLine1MinObj
 from sqlalchemy import func
@@ -82,7 +82,6 @@ class ContractHistory():
         TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
-        TxContractDealKdataHourly.query.filter(TxContractDealKdataHourly.block_num>=block_num).delete()
         TxContractDealKdataDaily.query.filter(TxContractDealKdataDaily.block_num>=block_num).delete()
         TxContractDealKdataWeekly.query.filter(TxContractDealKdataWeekly.block_num>=block_num).delete()
 

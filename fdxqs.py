@@ -4,11 +4,12 @@ import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractPersonExchangeEvent, TxContractDealKdataHourly, TxContractDealKdataDaily, \
+        ContractPersonExchangeEvent, TxContractDealKdataDaily, TxContractDealKdata6Hour, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
-from app.k_line_obj import KLine1MinObj
-from app.k_line_obj import KLine5MinObj
-from app.models import TxContractDealKdata5Min
+from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
+        KLine6HourObj, KLine12HourObj, KLineWeeklyObj, KLineDailyObj, KLineMonthlyObj
+from app.models import TxContractDealKdata5Min, TxContractDealKdata15Min, TxContractDealKdata30Min
+from app.models import TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, TxContractDealKdataMonthly
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -38,7 +39,7 @@ log_file_handler = TimedRotatingFileHandler(filename="hx_util_log", when="D", in
 #log_file_handler.suffix = "%Y-%m-%d_%H-%M.log"
 #log_file_handler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}.log$")
 log_file_handler.setFormatter(formatter)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger()
 log.addHandler(log_file_handler)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -107,11 +108,17 @@ def dropdb():
     ContractInfo.query.delete()
     ContractPersonExchangeOrder.query.delete()
     ContractPersonExchangeEvent.query.delete()
-    TxContractDealKdataHourly.query.delete()
-    TxContractDealKdataDaily.query.delete()
-    TxContractDealKdataWeekly.query.delete()
     AccountInfo.query.delete()
     TxContractDealKdata1Min.query.delete()
+    TxContractDealKdata5Min.query.delete()
+    TxContractDealKdata15Min.query.delete()
+    TxContractDealKdata30Min.query.delete()
+    TxContractDealKdata1Hour.query.delete()
+    TxContractDealKdata2Hour.query.delete()
+    TxContractDealKdata6Hour.query.delete()
+    TxContractDealKdata12Hour.query.delete()
+    TxContractDealKdataDaily.query.delete()
+    TxContractDealKdataWeekly.query.delete()
     print("clear db finished")
 
 
@@ -128,24 +135,42 @@ def rpc_test(method, args):
 @app.cli.command('update_kline')
 @click.option('--times', default=1, type=int, help='scan times')
 def update_kline(times):
+    def process_kline_common(base_table, target_table, process_obj):
+        k_last = target_table.query.order_by(target_table.block_num.desc()).first()
+        k = process_obj(k_last)
+        ticks = base_table.query.order_by(base_table.id).all()
+        for t in ticks:
+            k.process_tick(t)
+        if k_last is not None:
+            target_table.query.filter_by(block_num=k_last.block_num).delete()
+        for r in k.get_k_data():
+            db.session.add(target_table(k_open=r['k_open'], k_close=r['k_close'], \
+                    k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
+                    block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
+
     # Process 1-minute K-Line
-    k = KLine1MinObj(None)
-    ticks = TxContractDealTick.query.order_by(TxContractDealTick.block_num).all()
-    for t in ticks:
-        k.process_tick(t)
-    for r in k.get_k_data():
-        db.session.add(TxContractDealKdata1Min(k_open=r['k_open'], k_close=r['k_close'], \
-                k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
-                block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
+    process_kline_common(TxContractDealTick, TxContractDealKdata1Min, KLine1MinObj)
     # Process 5-minutes K-Line
-    k = KLine5MinObj(None)
-    ticks = TxContractDealKdata1Min.query.order_by(TxContractDealKdata1Min.block_num).all()
-    for t in ticks:
-        k.process_tick(t)
-    for r in k.get_k_data():
-        db.session.add(TxContractDealKdata5Min(k_open=r['k_open'], k_close=r['k_close'], \
-                k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
-                block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
+    process_kline_common(TxContractDealKdata1Min, TxContractDealKdata5Min, KLine5MinObj)
+    # Process 15-minutes K-Line
+    process_kline_common(TxContractDealKdata1Min, TxContractDealKdata15Min, KLine15MinObj)
+    # Process 30-minutes K-Line
+    process_kline_common(TxContractDealKdata1Min, TxContractDealKdata30Min, KLine30MinObj)
+    # Process 1-hour K-Line
+    process_kline_common(TxContractDealKdata1Min, TxContractDealKdata1Hour, KLine1HourObj)
+    # Process 2-hour K-Line
+    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdata2Hour, KLine2HourObj)
+    # Process 6-hour K-Line
+    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdata6Hour, KLine6HourObj)
+    # Process 12-hour K-Line
+    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdata6Hour, KLine12HourObj)
+    # Process daily K-Line
+    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdataDaily, KLineDailyObj)
+    # Process weekly K-Line
+    process_kline_common(TxContractDealKdata1Hour, TxContractDealKdataWeekly, KLineWeeklyObj)
+    # Process monthly K-Line
+    process_kline_common(TxContractDealKdataDaily, TxContractDealKdataMonthly, KLineMonthlyObj)
+
 
 
 @app.cli.command('scan_block')

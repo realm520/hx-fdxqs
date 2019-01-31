@@ -218,6 +218,150 @@ class TxContractDealKdata5Min(db.Model):
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp}
 
 
+class TxContractDealKdata15Min(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_15min'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata15Min, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata15Min %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdata30Min(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_30min'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata30Min, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata30Min %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdata1Hour(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_1hour'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata1Hour, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata1Hour %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdata2Hour(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_2hour'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata2Hour, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata2Hour %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdata6Hour(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_6hour'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata6Hour, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata6Hour %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdata12Hour(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_12hour'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdata12Hour, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdata12Hour %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
 class TxContractDealKdataDaily(db.Model):
     __tablename__ = 'tx_contract_deal_kdata_daily'
     id = db.Column(db.Integer, primary_key=True)
@@ -225,6 +369,8 @@ class TxContractDealKdataDaily(db.Model):
     k_close = db.Column(db.Float)
     k_low = db.Column(db.Float)
     k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
     block_num = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime)
 
@@ -236,30 +382,8 @@ class TxContractDealKdataDaily(db.Model):
     
     def toQueryObj(self):
         return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, \
-                "timestamp": self.timestamp}
-
-
-class TxContractDealKdataHourly(db.Model):
-    __tablename__ = 'tx_contract_deal_kdata_hourly'
-    id = db.Column(db.Integer, primary_key=True)
-    k_open = db.Column(db.Float)
-    k_close = db.Column(db.Float)
-    k_low = db.Column(db.Float)
-    k_high = db.Column(db.Float)
-    block_num = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime)
-
-    def __init__(self, **kwargs):
-        super(TxContractDealKdataHourly, self).__init__(**kwargs)
-
-    def __repr__(self):
-        return '<TxContractDealKdataHourly %r>' % self.tx_id
-    
-    def toQueryObj(self):
-        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, \
-                "timestamp": self.timestamp}
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
 
 
 class TxContractDealKdataWeekly(db.Model):
@@ -269,6 +393,8 @@ class TxContractDealKdataWeekly(db.Model):
     k_close = db.Column(db.Float)
     k_low = db.Column(db.Float)
     k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
     block_num = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime)
 
@@ -280,8 +406,32 @@ class TxContractDealKdataWeekly(db.Model):
     
     def toQueryObj(self):
         return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, \
-                "timestamp": self.timestamp}
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+
+
+class TxContractDealKdataMonthly(db.Model):
+    __tablename__ = 'tx_contract_deal_kdata_monthly'
+    id = db.Column(db.Integer, primary_key=True)
+    k_open = db.Column(db.Float)
+    k_close = db.Column(db.Float)
+    k_low = db.Column(db.Float)
+    k_high = db.Column(db.Float)
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDealKdataMonthly, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDealKdataMonthly %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
+                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
 
 
 class ContractPersonExchangeEvent(db.Model):
