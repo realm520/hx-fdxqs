@@ -4,12 +4,11 @@ import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractPersonExchangeEvent, TxContractDealKdataDaily, TxContractDealKdata6Hour, \
+        ContractPersonExchangeEvent, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
+from app.models import kline_table_list
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
         KLine6HourObj, KLine12HourObj, KLineWeeklyObj, KLineDailyObj, KLineMonthlyObj
-from app.models import TxContractDealKdata5Min, TxContractDealKdata15Min, TxContractDealKdata30Min
-from app.models import TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, TxContractDealKdataMonthly
 from flask_migrate import Migrate
 # from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -75,25 +74,12 @@ def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
 
 @jsonrpc.method('hx.fdxqs.exchange.kline.query(pair=str, type=int, page=int, page_count=int)', validate=True)
 def exchange_bid_query(pair, type, page=1, page_count=10):
-    kline_data_list = [
-            TxContractDealKdata1Min, 
-            TxContractDealKdata5Min,
-            TxContractDealKdata15Min,
-            TxContractDealKdata30Min,
-            TxContractDealKdata1Hour,
-            TxContractDealKdata2Hour,
-            TxContractDealKdata6Hour,
-            TxContractDealKdata12Hour,
-            TxContractDealKdataDaily,
-            TxContractDealKdataWeekly,
-            TxContractDealKdataMonthly
-        ]
-    if type < 0 or type >= len(kline_data_list):
+    if type < 0 or type >= len(kline_table_list):
         return {
             'error': 'invalid [type]'
         }
-    data = kline_data_list[type].query.filter_by(ex_pair=pair).\
-            order_by(kline_data_list[type].id).paginate(page, page_count, False)
+    data = kline_table_list[type].query.filter_by(ex_pair=pair).\
+            order_by(kline_table_list[type].id).paginate(page, page_count, False)
     return {
             'total_records': data.total,
             'per_page': data.per_page,
@@ -126,16 +112,8 @@ def dropdb():
     ContractPersonExchangeOrder.query.delete()
     ContractPersonExchangeEvent.query.delete()
     AccountInfo.query.delete()
-    TxContractDealKdata1Min.query.delete()
-    TxContractDealKdata5Min.query.delete()
-    TxContractDealKdata15Min.query.delete()
-    TxContractDealKdata30Min.query.delete()
-    TxContractDealKdata1Hour.query.delete()
-    TxContractDealKdata2Hour.query.delete()
-    TxContractDealKdata6Hour.query.delete()
-    TxContractDealKdata12Hour.query.delete()
-    TxContractDealKdataDaily.query.delete()
-    TxContractDealKdataWeekly.query.delete()
+    for t in kline_table_list:
+        t.query.delete()
     print("clear db finished")
 
 
@@ -152,6 +130,10 @@ def rpc_test(method, args):
 @app.cli.command('update_kline')
 @click.option('--times', default=1, type=int, help='scan times')
 def update_kline(times):
+    from app.models import TxContractDealKdata5Min, TxContractDealKdata15Min, \
+            TxContractDealKdata30Min, TxContractDealKdataDaily, TxContractDealKdata6Hour, \
+            TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, \
+            TxContractDealKdataMonthly
     def process_kline_common(base_table, target_table, process_obj, pair='BTC/ETH'):
         k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.block_num.desc()).first()
         k = process_obj(k_last)

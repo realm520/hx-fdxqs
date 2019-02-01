@@ -1,6 +1,7 @@
 from . import db
 
 
+
 class ServiceConfig(db.Model):
     __tablename__ = 'service_config'
     id = db.Column(db.Integer, primary_key=True)
@@ -509,3 +510,16 @@ class BlockRawHistory(db.Model):
     def __repr__(self):
         return '<BlockRawHistory %r>' % self.block_id
 
+kline_table_list = [
+    TxContractDealKdata1Min, 
+    TxContractDealKdata5Min,
+    TxContractDealKdata15Min,
+    TxContractDealKdata30Min,
+    TxContractDealKdata1Hour,
+    TxContractDealKdata2Hour,
+    TxContractDealKdata6Hour,
+    TxContractDealKdata12Hour,
+    TxContractDealKdataDaily,
+    TxContractDealKdataWeekly,
+    TxContractDealKdataMonthly
+]
