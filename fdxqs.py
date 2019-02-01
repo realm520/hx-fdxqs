@@ -11,7 +11,7 @@ from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30Min
 from app.models import TxContractDealKdata5Min, TxContractDealKdata15Min, TxContractDealKdata30Min
 from app.models import TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, TxContractDealKdataMonthly
 from flask_migrate import Migrate
-from flask_apscheduler import APScheduler
+# from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
 from logging.handlers import TimedRotatingFileHandler
 
@@ -24,13 +24,8 @@ if os.environ.get('FLASK_COVERAGE'):
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 migrate = Migrate(app, db)
-scheduler = APScheduler()
-jsonrpc = JSONRPC(app, '/api')
-
-
-@app.cli.command('hello')
-def hello():
-    print("hello")
+# scheduler = APScheduler()
+jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
 log_fmt = '%(asctime)s\tFile \"%(filename)s\",line %(lineno)s\t%(levelname)s: %(message)s'
@@ -197,7 +192,6 @@ def update_kline(times):
     process_kline_common(TxContractDealKdata1Hour, TxContractDealKdataWeekly, KLineWeeklyObj)
     # Process monthly K-Line
     process_kline_common(TxContractDealKdataDaily, TxContractDealKdataMonthly, KLineMonthlyObj)
-
 
 
 @app.cli.command('scan_block')
