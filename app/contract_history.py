@@ -8,7 +8,7 @@ import datetime
 from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, AccountInfo, CrossChainAssetInOut, TxContractDealTick, \
-        kline_table_list
+        kline_table_list, ContractExchangeOrder
 from app.k_line_obj import KLine1MinObj
 from sqlalchemy import func
 
@@ -169,10 +169,36 @@ class ContractHistory():
                             self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
+                            maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3])
+                            if items[0] <= 0 or items[1] <= 0:
+                                if  maker_tx is not None:
+                                    maker_tx.delete()
+                            else:
+                                if  maker_tx is not None:
+                                    maker_tx.base_amount = items[0]
+                                    maker_tx.quote_amount = items[1]
+                                    self.db.session.add(maker_tx)
+                                else:
+                                    self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, base_amount=int(items[0]), \
+                                    quote_amount=int(items[1]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                    timestamp=block['timestamp']))
                         for sells in order['transactionSells']:
                             items = sells.split(',')
                             self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                    timestamp=block['timestamp']))
+                            maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3])
+                            if items[0] <= 0 or items[1] <= 0:
+                                if  maker_tx is not None:
+                                    maker_tx.delete()
+                            else:
+                                if  maker_tx is not None:
+                                    maker_tx.base_amount = items[0]
+                                    maker_tx.quote_amount = items[1]
+                                    self.db.session.add(maker_tx)
+                                else:
+                                    self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, base_amount=int(items[0]), \
+                                    quote_amount=int(items[1]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
                         if order['totalExchangeBaseAmount'] > 0:
                             self.db.session.add(TxContractDealTick(tx_id=txid, base_amount=int(order['totalExchangeBaseAmount']), \

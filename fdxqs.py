@@ -4,7 +4,7 @@ import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractPersonExchangeEvent, \
+        ContractPersonExchangeEvent, ContractExchangeOrder, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
 from app.models import kline_table_list
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
@@ -89,12 +89,19 @@ def exchange_bid_query(pair, type, page=1, page_count=10):
         }
 
 
-'''
-@jsonrpc.method('hx.fdxqs.exchange.cancel.query(addr=str, pair=str, offset=int, limit=int)', validate=True)
-def exchange_cancel_query(addr, pair, offset, limit):
-    #print("addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, offset, limit))
-    return [{"addr": "aaaa", "pair": "HC/HX", "ask_count": 1, "bid_count": 2}]
-'''
+@jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
+def exchange_cancel_query(addr, pair, page=1, page_count=10):
+    logging.info('[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, page: %d, page_count: %d' % (addr, pair, page, page_count))
+    data = ContractExchangeOrder.query.filter_by(addr=addr, ex_pair=pair).\
+            order_by(ContractExchangeOrder.quote_amount/ContractExchangeOrder.base_amount).paginate(page, page_count, False)
+    return {
+            'total_records': data.total,
+            'per_page': data.per_page,
+            'total_pages': data.pages,
+            'current_page': data.page,
+            'data': [t.toQueryObj() for t in data.items]
+        }
+
 
 @app.shell_context_processor
 def make_shell_context():
@@ -111,6 +118,8 @@ def dropdb():
     ContractInfo.query.delete()
     ContractPersonExchangeOrder.query.delete()
     ContractPersonExchangeEvent.query.delete()
+    ContractExchangeOrder.query.delete()
+    TxContractDealTick.query.delete()
     AccountInfo.query.delete()
     for t in kline_table_list:
         t.query.delete()

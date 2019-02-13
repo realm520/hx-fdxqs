@@ -124,6 +124,29 @@ class CrossChainAssetInOut(db.Model):
                 "timestamp": self.timestamp, "combine_tx_id": self.combine_tx_id}
 
 
+class ContractExchangeOrder(db.Model):
+    __tablename__ = 'contract_exchange_order'
+    id = db.Column(db.Integer, primary_key=True)
+    address = db.Column(db.String(64), index=True)
+    ex_pair = db.Column(db.String(64), index=True)
+    ex_type = db.Column(db.String(8))
+    base_amount = db.Column(db.BigInteger)
+    quote_amount = db.Column(db.BigInteger)
+    tx_id = db.Column(db.String(64), index=True)
+    block_num = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(ContractExchangeOrder, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<ContractExchangeOrder %r>' % self.contract_address
+    
+    def toQueryObj(self):
+        return {"base_amount": self.base_amount, "quote_amount": self.quote_amount, \
+                "ex_pair": self.ex_pair, "ex_type": self.ex_type, "tx_id": self.tx_id}
+
+
 class TxContractDealHistory(db.Model):
     __tablename__ = 'tx_contract_deal_history'
     id = db.Column(db.Integer, primary_key=True)
