@@ -1,5 +1,6 @@
 import click
 import os
+import datetime
 import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
@@ -72,14 +73,24 @@ def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
         }
 
 
-@jsonrpc.method('hx.fdxqs.exchange.kline.query(pair=str, type=int, page=int, page_count=int)', validate=True)
-def exchange_bid_query(pair, type, page=1, page_count=10):
+@jsonrpc.method('hx.fdxqs.exchange.kline.query(pair=str, type=int, count=int)', validate=True)
+def exchange_bid_query(pair, type, count=100):
     if type < 0 or type >= len(kline_table_list):
         return {
             'error': 'invalid [type]'
         }
-    data = kline_table_list[type].query.filter_by(ex_pair=pair).\
-            order_by(kline_table_list[type].id).paginate(page, page_count, False)
+    now = datetime.datetime.now()
+    start = now - datetime.timedelta(minutes=count)
+    table = kline_table_list[type]
+    data = table.query.filter(table.ex_pair==pair, table.timestamp>=start).\
+            order_by(kline_table_list[type].id).all()
+    return {
+            'data': [t.toQueryObj() for t in data]
+        }
+
+'''
+@jsonrpc.method('hx.fdxqs.exchange.coin.market()', validate=True)
+def exchange_bid_query(pair, type, page=1, page_count=10):
     return {
             'total_records': data.total,
             'per_page': data.per_page,
@@ -87,7 +98,7 @@ def exchange_bid_query(pair, type, page=1, page_count=10):
             'current_page': data.page,
             'data': [t.toQueryObj() for t in data.items]
         }
-
+'''
 
 @jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
 def exchange_cancel_query(addr, pair, page=1, page_count=10):
