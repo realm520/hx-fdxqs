@@ -130,9 +130,12 @@ class ContractExchangeOrder(db.Model):
     address = db.Column(db.String(64), index=True)
     ex_pair = db.Column(db.String(64), index=True)
     ex_type = db.Column(db.String(8))
-    base_amount = db.Column(db.BigInteger)
-    quote_amount = db.Column(db.BigInteger)
+    origin_base_amount = db.Column(db.BigInteger)
+    origin_quote_amount = db.Column(db.BigInteger)
+    current_base_amount = db.Column(db.BigInteger)
+    current_quote_amount = db.Column(db.BigInteger)
     tx_id = db.Column(db.String(64), index=True)
+    stat = db.Column(db.Integer)
     block_num = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime)
 
@@ -143,10 +146,11 @@ class ContractExchangeOrder(db.Model):
         return '<ContractExchangeOrder %r>' % self.contract_address
     
     def toQueryObj(self):
-        return {"base_amount": self.base_amount, "quote_amount": self.quote_amount, \
-                "ex_pair": self.ex_pair, "ex_type": self.ex_type, "tx_id": self.tx_id}
+        return {"current_base_amount": self.current_base_amount, "current_quote_amount": self.current_quote_amount, \
+                "origin_base_amount": self.origin_base_amount, "origin_quote_amount": self.origin_quote_amount, \
+                "ex_pair": self.ex_pair, "ex_type": self.ex_type, "tx_id": self.tx_id, 'stat': self.stat}
 
-
+'''
 class TxContractDealHistory(db.Model):
     __tablename__ = 'tx_contract_deal_history'
     id = db.Column(db.Integer, primary_key=True)
@@ -170,7 +174,7 @@ class TxContractDealHistory(db.Model):
         return {"addr": self.address, "pair": self.ex_pair, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "block_num": self.block_num, \
                 "timestamp": self.timestamp}
-
+'''
 
 class TxContractDealTick(db.Model):
     __tablename__ = 'tx_contract_deal_tick'

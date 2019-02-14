@@ -4,7 +4,7 @@ import os
 import datetime
 import logging
 from app import create_app, db
-from app.models import TxContractRawHistory, TxContractDealHistory, ServiceConfig, \
+from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
         ContractPersonExchangeEvent, ContractExchangeOrder, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
@@ -50,8 +50,8 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 @jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
 def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
     logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
-    data = TxContractDealHistory.query.filter_by(address=addr, ex_pair=pair).\
-            order_by(TxContractDealHistory.id.desc()).paginate(page, page_count, False)
+    data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
+            order_by(ContractExchangeOrder.id.desc()).paginate(page, page_count, False)
     return {
             'total_records': data.total,
             'per_page': data.per_page,
@@ -124,7 +124,7 @@ def make_shell_context():
 @app.cli.command('cleardb')
 def dropdb():
     TxContractRawHistory.query.delete()
-    TxContractDealHistory.query.delete()
+    # TxContractDealHistory.query.delete()
     BlockRawHistory.query.delete()
     TxContractEventHistory.query.delete()
     ServiceConfig.query.delete()

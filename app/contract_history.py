@@ -5,7 +5,7 @@ import json
 import requests
 import logging
 import datetime
-from app.models import TxContractRawHistory, TxContractDealHistory, ContractInfo, \
+from app.models import TxContractRawHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, AccountInfo, CrossChainAssetInOut, TxContractDealTick, \
         kline_table_list, ContractExchangeOrder
@@ -79,7 +79,7 @@ class ContractHistory():
         TxContractRawHistory.query.filter(TxContractRawHistory.block_num>=block_num).delete()
         TxContractEventHistory.query.filter(TxContractEventHistory.block_num>=block_num).delete()
         ContractInfo.query.filter(ContractInfo.block_num>=block_num).delete()
-        TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
+        # TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
         for t in kline_table_list:
@@ -164,46 +164,49 @@ class ContractHistory():
                 for e in obj['events']:
                     if contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
                         order = json.loads(e['event_arg'])
+                        items = order['putOnOrder'].split(',')
+                        self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, origin_base_amount=int(items[0]), \
+                            origin_quote_amount=int(items[1]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], \
+                            block_num=int(block['number']), current_base_amount=int(items[0]), current_quote_amount=int(items[1]), \
+                            timestamp=block['timestamp'], stat=1))
                         for buys in order['transactionBuys']:
                             items = buys.split(',')
-                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
-                                    quote_amount=int(items[7]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
-                                    timestamp=block['timestamp']))
                             maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3]).first()
-                            if items[0] <= 0 or items[1] <= 0:
-                                if  maker_tx is not None:
-                                    maker_tx.delete()
+                            if maker_tx is None:
+                                logging.error('Matched txid is not found: %s' % items[3])
                             else:
-                                if  maker_tx is not None:
-                                    maker_tx.base_amount = items[0]
-                                    maker_tx.quote_amount = items[1]
-                                    self.db.session.add(maker_tx)
+                                maker_tx.current_base_amount = items[0]
+                                maker_tx.current_quote_amount = items[1]
+                                if items[0] <= 0 or items[1] <= 0:
+                                    maker_tx.stat = 3
                                 else:
-                                    self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, base_amount=int(items[0]), \
-                                    quote_amount=int(items[1]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
-                                    timestamp=block['timestamp']))
+                                    maker_tx.stat = 2
+                                self.db.session.add(maker_tx)
                         for sells in order['transactionSells']:
                             items = sells.split(',')
-                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
-                                    quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
-                                    timestamp=block['timestamp']))
                             maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3]).first()
-                            if items[0] <= 0 or items[1] <= 0:
-                                if  maker_tx is not None:
-                                    maker_tx.delete()
+                            if maker_tx is None:
+                                logging.error('Matched txid is not found: %s' % items[3])
                             else:
-                                if  maker_tx is not None:
-                                    maker_tx.base_amount = items[0]
-                                    maker_tx.quote_amount = items[1]
-                                    self.db.session.add(maker_tx)
+                                maker_tx.current_base_amount = items[0]
+                                maker_tx.current_quote_amount = items[1]
+                                if items[0] <= 0 or items[1] <= 0:
+                                    maker_tx.stat = 3
                                 else:
-                                    self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, base_amount=int(items[0]), \
-                                    quote_amount=int(items[1]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
-                                    timestamp=block['timestamp']))
+                                    maker_tx.stat = 2
+                                self.db.session.add(maker_tx)
                         if order['totalExchangeBaseAmount'] > 0:
                             self.db.session.add(TxContractDealTick(tx_id=txid, base_amount=int(order['totalExchangeBaseAmount']), \
                                     quote_amount=int(order['totalExchangeQuoteAmount']), ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
+                    elif contract_type == 'exchange' and (e['event_name'] == 'OrderCanceled'):
+                        order = json.loads(e['event_arg'])
+                        maker_tx = ContractExchangeOrder.query.filter_by(tx_id=order['txid']).first()
+                        if maker_tx is None:
+                            logging.error('Matched txid is not found: %s' % order['txid'])
+                        else:
+                            maker_tx.stat = 4
+                            self.db.session.add(maker_tx)
                     elif contract_type == 'exchange_personal':
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
                                 event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \
