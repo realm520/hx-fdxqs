@@ -1,4 +1,5 @@
 import click
+from flask_cors import CORS
 import os
 import datetime
 import logging
@@ -23,6 +24,7 @@ if os.environ.get('FLASK_COVERAGE'):
     COV.start()
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+cors = CORS(app, resources={r"/api": {"origins": "*"}})
 migrate = Migrate(app, db)
 # scheduler = APScheduler()
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
@@ -103,7 +105,7 @@ def exchange_bid_query(pair, type, page=1, page_count=10):
 @jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
 def exchange_cancel_query(addr, pair, page=1, page_count=10):
     logging.info('[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, page: %d, page_count: %d' % (addr, pair, page, page_count))
-    data = ContractExchangeOrder.query.filter_by(addr=addr, ex_pair=pair).\
+    data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
             order_by(ContractExchangeOrder.quote_amount/ContractExchangeOrder.base_amount).paginate(page, page_count, False)
     return {
             'total_records': data.total,
@@ -154,7 +156,7 @@ def update_kline(times):
             TxContractDealKdata30Min, TxContractDealKdataDaily, TxContractDealKdata6Hour, \
             TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, \
             TxContractDealKdataMonthly
-    def process_kline_common(base_table, target_table, process_obj, pair='BTC/ETH'):
+    def process_kline_common(base_table, target_table, process_obj, pair='HC/HX'):
         k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.block_num.desc()).first()
         k = process_obj(k_last)
         if k_last is None:

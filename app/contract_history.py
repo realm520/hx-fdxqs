@@ -169,7 +169,7 @@ class ContractHistory():
                             self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
-                            maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3])
+                            maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3]).first()
                             if items[0] <= 0 or items[1] <= 0:
                                 if  maker_tx is not None:
                                     maker_tx.delete()
@@ -187,7 +187,7 @@ class ContractHistory():
                             self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
-                            maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3])
+                            maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3]).first()
                             if items[0] <= 0 or items[1] <= 0:
                                 if  maker_tx is not None:
                                     maker_tx.delete()
