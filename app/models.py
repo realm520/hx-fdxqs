@@ -151,6 +151,32 @@ class ContractExchangeOrder(db.Model):
                 "ex_pair": self.ex_pair, "ex_type": self.ex_type, "tx_id": self.tx_id, 'stat': self.stat, \
                 "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
+
+class TxContractDepositWithdraw(db.Model):
+    __tablename__ = 'tx_contract_deposit_withdraw'
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.String(64), index=True)
+    address = db.Column(db.String(64), index=True)
+    amount = db.Column(db.BigInteger)
+    fee = db.Column(db.BigInteger)
+    asset_type = db.Column(db.String(8), index=True)
+    asset_symbol = db.Column(db.String(64), index=True)
+    block_num = db.Column(db.Integer, index=True)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(TxContractDepositWithdraw, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<TxContractDepositWithdraw %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"tx_id": self.tx_id, "amount": self.amount, \
+                "asset_type": self.asset_type, "block_num": self.block_num, \
+                "asset_symbol": self.asset_symbol, "address": self.address, \
+                "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "fee": self.fee}
+
+
 '''
 class TxContractDealHistory(db.Model):
     __tablename__ = 'tx_contract_deal_history'

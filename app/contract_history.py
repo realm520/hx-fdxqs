@@ -8,8 +8,7 @@ import datetime
 from app.models import TxContractRawHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, AccountInfo, CrossChainAssetInOut, TxContractDealTick, \
-        kline_table_list, ContractExchangeOrder
-from app.k_line_obj import KLine1MinObj
+        kline_table_list, ContractExchangeOrder, TxContractDepositWithdraw
 from sqlalchemy import func
 
 
@@ -27,7 +26,6 @@ class ContractHistory():
     OP_TYPE_CONTRACT_TRANSFER = 81
     EXCHANGE_PERSON_TYPE_ABI = r'["cancelAllOrder", "cancelSellOrder", "cancelSellOrderPair", "close", "init", "on_deposit_asset", "on_destroy", "putOnSellOrder", "withdrawAll", "withdrawAsset", "withrawRemainAsset"]'
     EXCHANGE_PAIR_TYPE_ABI = r'["buySlot", "buySlotsInfo", "buy_orders_num", "getBuyOrders", "getInfo", "getSellOrders", "getUserBuyOrders", "getUserBuyOrdersCount", "getUserSellOrders", "getUserSellOrdersCount", "sellSlot", "sellSlotsInfo", "sell_orders_num"]'
-    EXCHANGE_TYPE_ABI = r'["cancelChangeAdminProposal", "cancelOrder", "cancelRegisterExchangePairProposal", "cancelUnboundExchangePairProposal", "freezeExchangePair", "init", "init_config", "on_deposit_asset", "on_destroy", "putOnBuyOrder", "putOnSellOrder", "reorganizeSlots", "setLeastOrderAmount", "setMAXCOUNTPERSLOT", "submitChangeAdminProposal", "submitRegisterExchangePairProposal", "submitUnboundExchangePairProposal", "unfreezeExchangePair", "unlockUserOffPairBalance", "voteChangeAdminProposal", "voteRegisterExchangePairProposal", "voteUnboundExchangePairProposal", "withdraw"]'
     STO_TYPE_ABI = r'["addCrowdfundingInfo", "adminWithdrawFund", "approve", "changeAdmin", "closeCrowdfunding", "deleteLastCrowdfundingInfo", "init", "init_config", "modifyLastCrowdfundingInfo", "on_deposit_asset", "on_destroy", "openCrowdfunding", "pause", "resume", "returnAllCrowdAssetBack", "stop", "transfer", "transferFrom", "userGetCrowdAssetBack", "withdrawBonuses"]'
 
 
@@ -35,6 +33,7 @@ class ContractHistory():
         self.rpc_connect = config['HX_RPC_ENDPOINT']
         self.base_path = config['WORK_DIR']
         self.db = db
+        self.contract_exchange_id = config['CONTRACT_EXCHANGE_ID']
         self.contract_caller = config['CONTRACT_CALLER']
         self.block_cache_size = 360
         self.block_cache_limit = 720
@@ -140,6 +139,7 @@ class ContractHistory():
         for obj in invoke_obj:
             if not obj['exec_succeed']:
                 continue
+            
             if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER:
                 abi = json.dumps(op[1]['contract_code']['abi'])
                 if abi == ContractHistory.STO_TYPE_ABI:
@@ -148,7 +148,7 @@ class ContractHistory():
                     contract_type = 'exchange_pair'
                 elif abi == ContractHistory.EXCHANGE_PERSON_TYPE_ABI:
                     contract_type = 'exchange_personal'
-                elif abi == ContractHistory.EXCHANGE_TYPE_ABI:
+                elif obj['contract_registed'] in self.contract_exchange_id:
                     contract_type = 'exchange'
                 else:
                     contract_type = 'unknown'
@@ -156,13 +156,30 @@ class ContractHistory():
                         tx_id=txid, abi=abi, code_hash=op[1]['contract_code']['code_hash'], \
                         offline_abi=json.dumps(op[1]['contract_code']['offline_abi']), block_num=block['number'], \
                         timestamp=block['timestamp'], contract_type=contract_type))
+            elif op[0] == ContractHistory.OP_TYPE_CONTRACT_TRANSFER:
+                contract_info = ContractInfo.query.filter_by(contract_id=op[1]['contract_id']).first()
+                if contract_info is None:
+                    continue
+                contract_type = contract_info.contract_type
+                for e in obj['events']:
+                    if contract_type == 'exchange' and e['event_name'] == 'Deposited':
+                        order = json.loads(e['event_arg'])
+                        self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['from_address'], \
+                                timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
+                                asset_type='deposit', asset_symbol=order['symbol'], fee=0))
             elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
                 contract_info = ContractInfo.query.filter_by(contract_id=op[1]['contract_id']).first()
                 if contract_info is None:
                     continue
                 contract_type = contract_info.contract_type
                 for e in obj['events']:
-                    if contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
+                    if contract_type == 'exchange' and e['event_name'] == 'Withdrawed':
+                        logging.info('Withdrawed')
+                        order = json.loads(e['event_arg'])
+                        self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['to_address'], \
+                                timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
+                                asset_type='withdraw', asset_symbol=order['symbol'], fee=order['fee']))
+                    elif contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
                         order = json.loads(e['event_arg'])
                         items = order['putOnOrder'].split(',')
                         self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, origin_base_amount=int(items[0]), \

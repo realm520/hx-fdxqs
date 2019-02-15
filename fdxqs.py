@@ -8,7 +8,7 @@ from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
         ContractPersonExchangeEvent, ContractExchangeOrder, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
-from app.models import kline_table_list
+from app.models import kline_table_list, TxContractDepositWithdraw
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
         KLine6HourObj, KLine12HourObj, KLineWeeklyObj, KLineDailyObj, KLineMonthlyObj
 from flask_migrate import Migrate
@@ -47,9 +47,27 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 #     return '<h1>Hello, %s!<h1>' % name
 
 
-@jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
-def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
-    logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
+@jsonrpc.method('hx.fdxqs.exchange.deposit.withdraw.query(addr=str, symbol=str, page=int, page_count=int)', validate=True)
+def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10):
+    logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, symbol: %s, offset: %d, limit: %d" % (addr, symbol, page, page_count))
+    if len(symbol) > 0:
+        data = TxContractDepositWithdraw.query.filter_by(address=addr, asset_symbol=symbol).\
+                order_by(TxContractDepositWithdraw.block_num.desc()).paginate(page, page_count, False)
+    else:
+        data = TxContractDepositWithdraw.query.filter_by(address=addr).\
+                order_by(TxContractDepositWithdraw.block_num.desc()).paginate(page, page_count, False)
+    return {
+            'total_records': data.total,
+            'per_page': data.per_page,
+            'total_pages': data.pages,
+            'current_page': data.page,
+            'data': [t.toQueryObj() for t in data.items]
+        }
+
+
+@jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
+def hx_fdxqs_exchange_order_query(addr, pair, page=1, page_count=10):
+    logging.info("[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
     data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
             order_by(ContractExchangeOrder.id.desc()).paginate(page, page_count, False)
     return {
