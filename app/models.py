@@ -148,7 +148,8 @@ class ContractExchangeOrder(db.Model):
     def toQueryObj(self):
         return {"current_base_amount": self.current_base_amount, "current_quote_amount": self.current_quote_amount, \
                 "origin_base_amount": self.origin_base_amount, "origin_quote_amount": self.origin_quote_amount, \
-                "ex_pair": self.ex_pair, "ex_type": self.ex_type, "tx_id": self.tx_id, 'stat': self.stat}
+                "ex_pair": self.ex_pair, "ex_type": self.ex_type, "tx_id": self.tx_id, 'stat': self.stat, \
+                "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 '''
 class TxContractDealHistory(db.Model):
