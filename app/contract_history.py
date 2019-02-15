@@ -192,9 +192,9 @@ class ContractHistory():
                             if maker_tx is None:
                                 logging.error('Matched txid is not found: %s' % items[3])
                             else:
-                                maker_tx.current_base_amount = items[0]
-                                maker_tx.current_quote_amount = items[1]
-                                if items[0] <= 0 or items[1] <= 0:
+                                maker_tx.current_base_amount = int(items[0])
+                                maker_tx.current_quote_amount = int(items[1])
+                                if int(items[0]) <= 0 or int(items[1]) <= 0:
                                     maker_tx.stat = 3
                                 else:
                                     maker_tx.stat = 2
@@ -205,9 +205,9 @@ class ContractHistory():
                             if maker_tx is None:
                                 logging.error('Matched txid is not found: %s' % items[3])
                             else:
-                                maker_tx.current_base_amount = items[0]
-                                maker_tx.current_quote_amount = items[1]
-                                if items[0] <= 0 or items[1] <= 0:
+                                maker_tx.current_base_amount = int(items[0])
+                                maker_tx.current_quote_amount = int(items[1])
+                                if int(items[0]) <= 0 or int(items[1]) <= 0:
                                     maker_tx.stat = 3
                                 else:
                                     maker_tx.stat = 2

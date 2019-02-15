@@ -67,6 +67,9 @@ def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10
 
 @jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
 def hx_fdxqs_exchange_order_query(addr, pair, page=1, page_count=10):
+    """
+    Query all orders by address
+    """
     logging.info("[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
     data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
             order_by(ContractExchangeOrder.id.desc()).paginate(page, page_count, False)
@@ -104,6 +107,15 @@ def exchange_bid_query(pair, type, count=100):
     table = kline_table_list[type]
     data = table.query.filter(table.ex_pair==pair, table.timestamp>=start).\
             order_by(kline_table_list[type].id).all()
+    if len(data) == 0:
+        data = table.query.filter(table.ex_pair==pair).\
+            order_by(kline_table_list[type].id).limit(1).all()
+    if data is None or len(data) == 0:
+        return {'data': []}
+    logging.info(len(data))
+    last_item = data[len(data)-1]
+    for i in range(len(data), count):
+        data.append(last_item)
     return {
             'data': [t.toQueryObj() for t in data]
         }
