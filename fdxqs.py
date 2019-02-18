@@ -65,12 +65,12 @@ def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10
         }
 
 
-@jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
-def hx_fdxqs_exchange_order_query(addr, pair, page=1, page_count=10):
+@jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
+def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
     """
     Query all orders by address
     """
-    logging.info("[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
+    logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
     data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
             order_by(ContractExchangeOrder.id.desc()).paginate(page, page_count, False)
     return {
@@ -152,20 +152,22 @@ def make_shell_context():
 
 
 @app.cli.command('cleardb')
-def dropdb():
-    TxContractRawHistory.query.delete()
-    # TxContractDealHistory.query.delete()
-    BlockRawHistory.query.delete()
-    TxContractEventHistory.query.delete()
-    ServiceConfig.query.delete()
-    ContractInfo.query.delete()
-    ContractPersonExchangeOrder.query.delete()
-    ContractPersonExchangeEvent.query.delete()
-    ContractExchangeOrder.query.delete()
-    TxContractDealTick.query.delete()
-    AccountInfo.query.delete()
-    for t in kline_table_list:
-        t.query.delete()
+@click.option('--block', default=0, type=int, help='block number from which to clear')
+def cleardb(block):
+    table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
+            ContractPersonExchangeOrder, ContractPersonExchangeEvent, ContractExchangeOrder, \
+            TxContractDealTick, AccountInfo]
+    table_to_clear += kline_table_list
+    for t in table_to_clear:
+        if block <= 0:
+            t.query.delete()
+    else:
+        delete_q = t.__table__.delete().where(t.block_num>=block)
+        db.session.execute(delete_q)
+
+    ServiceConfig.query.filter_by(key='scan_block').delete()
+    db.session.add(ServiceConfig(key='scan_block', value=str(block-1)))
+    db.session.commit()
     print("clear db finished")
 
 

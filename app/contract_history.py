@@ -174,7 +174,6 @@ class ContractHistory():
                 contract_type = contract_info.contract_type
                 for e in obj['events']:
                     if contract_type == 'exchange' and e['event_name'] == 'Withdrawed':
-                        logging.info('Withdrawed')
                         order = json.loads(e['event_arg'])
                         self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['to_address'], \
                                 timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
