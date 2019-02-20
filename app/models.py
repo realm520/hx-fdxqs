@@ -101,6 +101,7 @@ class ContractExchangePair(db.Model):
     baseAssetSymbol = db.Column(db.String(64))
     quoteAssetSymbol = db.Column(db.String(64))
     block_num = db.Column(db.Integer)
+    stat = db.Column(db.Integer)
 
     def __init__(self, **kwargs):
         super(ContractExchangePair, self).__init__(**kwargs)
@@ -111,7 +112,7 @@ class ContractExchangePair(db.Model):
     def toQueryObj(self):
         return {"contract_id": self.contract_id, "tx_id": self.tx_id, \
                 "baseAssetSymbol": self.baseAssetSymbol, "quoteAssetSymbol": self.quoteAssetSymbol, \
-                "block_num": self.block_num}
+                "block_num": self.block_num, "stat": self.stat}
 
 
 class CrossChainAssetInOut(db.Model):
