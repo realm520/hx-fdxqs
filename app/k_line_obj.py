@@ -47,11 +47,11 @@ class KLine1MinObj():
                 start_time = self.k_objs[self.current_k_obj_idx]['start_time']
                 next_time = start_time + datetime.timedelta(minutes=1)
                 time_diff = tick.timestamp - next_time
-                if time_diff.total_seconds() < 0: # invalid tick in the past
+                if (tick.timestamp-start_time).total_seconds() < 0: # invalid tick in the past
                     logging.warn("Tick in the past: %s - %s" % (str(tick.timestamp), str(start_time)))
                     return
                 elif time_diff.total_seconds() > 0:
-                    logging.info("Fill the gap between [%s] and [%s]" % (start_time, tick.timestamp))
+                    logging.debug("Fill the gap between [%s] and [%s]" % (start_time, tick.timestamp))
                     self.k_objs.append({
                         'k_open': self.k_objs[self.current_k_obj_idx]['k_close'],
                         'k_close': self.k_objs[self.current_k_obj_idx]['k_close'],

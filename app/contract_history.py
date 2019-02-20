@@ -8,7 +8,7 @@ import datetime
 from app.models import TxContractRawHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, AccountInfo, CrossChainAssetInOut, TxContractDealTick, \
-        kline_table_list, ContractExchangeOrder, TxContractDepositWithdraw
+        kline_table_list, ContractExchangeOrder, TxContractDepositWithdraw, ContractExchangePair
 from sqlalchemy import func
 
 
@@ -127,7 +127,7 @@ class ContractHistory():
                         [from_supply, to_supply, price] = o.split(',')
                         self.db.session.add(ContractPersonExchangeOrder(from_asset=from_asset, to_asset=to_asset, \
                                 from_supply=from_supply, to_supply=to_supply, price=price, \
-                                contract_address=contract.contract_address))
+                                contract_address=contract.contract_address, block_num=contract.block_num))
         self.db.session.commit()
 
 
@@ -223,6 +223,11 @@ class ContractHistory():
                         else:
                             maker_tx.stat = 4
                             self.db.session.add(maker_tx)
+                    elif contract_type == 'exchange' and (e['event_name'] == 'exchangePairOn'):
+                        order = json.loads(e['event_arg'])
+                        self.db.session.add(ContractExchangePair(contract_id=order['contractAddress'], tx_id=txid, \
+                                baseAssetSymbol=order['baseAssetSymbol'], quoteAssetSymbol=order['quoteAssetSymbol'], \
+                                block_num=int(block['number'])))
                     elif contract_type == 'exchange_personal':
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
                                 event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \

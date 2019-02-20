@@ -93,6 +93,27 @@ class ContractInfo(db.Model):
                 "block_num": self.block_num, "timestamp": self.timestamp}
 
 
+class ContractExchangePair(db.Model):
+    __tablename__ = 'contract_exchange_pair'
+    id = db.Column(db.Integer, primary_key=True)
+    contract_id = db.Column(db.String(64), index=True)
+    tx_id = db.Column(db.String(64))
+    baseAssetSymbol = db.Column(db.String(64))
+    quoteAssetSymbol = db.Column(db.String(64))
+    block_num = db.Column(db.Integer)
+
+    def __init__(self, **kwargs):
+        super(ContractExchangePair, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<ContractExchangePair %r>' % self.tx_id
+    
+    def toQueryObj(self):
+        return {"contract_id": self.contract_id, "tx_id": self.tx_id, \
+                "baseAssetSymbol": self.baseAssetSymbol, "quoteAssetSymbol": self.quoteAssetSymbol, \
+                "block_num": self.block_num}
+
+
 class CrossChainAssetInOut(db.Model):
     __tablename__ = 'cross_chain_asset_in_out'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -267,12 +288,12 @@ class TxContractDealKdata5Min(db.Model):
         super(TxContractDealKdata5Min, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<TxContractDealKdata5Min %r>' % self.tx_id
+        return '<TxContractDealKdata5Min %r>' % self.block_num
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
                 "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
-                "quote_amount": self.quote_amount, "timestamp": self.timestamp}
+                "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
 class TxContractDealKdata15Min(db.Model):
@@ -532,6 +553,7 @@ class ContractPersonExchangeOrder(db.Model):
     from_supply = db.Column(db.BigInteger)
     to_supply = db.Column(db.BigInteger)
     price = db.Column(db.String(64), index=True)
+    block_num = db.Column(db.Integer, index=True)
 
     def __init__(self, **kwargs):
         super(ContractPersonExchangeOrder, self).__init__(**kwargs)
