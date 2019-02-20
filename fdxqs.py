@@ -108,26 +108,36 @@ def exchange_bid_query(pair, type, count=100):
     start = now - datetime.timedelta(seconds=(count+1)*cycles[type])
     table = kline_table_list[type]
     logging.debug(start.strftime("%Y-%m-%d %H:%M:%S"))
+    missing_position = 0
     data = table.query.filter(table.ex_pair==pair, table.timestamp>=start).\
-            order_by(kline_table_list[type].id).all()
+            order_by(kline_table_list[type].timestamp).all()
+    logging.info(len(data))
     if len(data) == 0:
         data = table.query.filter(table.ex_pair==pair).\
             order_by(kline_table_list[type].block_num.desc()).limit(1).all()
-        if data is not None:
+        if len(data) == 1:
             data[0].base_amount = 0
             data[0].quote_amount = 0
+    else:
+        missing_position = len(data)
+    logging.info(missing_position)
+    logging.info(data[0].timestamp)
     if data is None or len(data) == 0:
         return {'data': []}
     last_item = copy.deepcopy(data[len(data)-1])
-
+    last_item.base_amount = 0
+    last_item.quote_amount = 0
     while True:
-        if last_item.timestamp + datetime.timedelta(seconds=cycles[type]) < now:
-            last_item.timestamp += datetime.timedelta(seconds=cycles[type])
-        else:
+        last_item.timestamp += datetime.timedelta(seconds=cycles[type])
+        if last_item.timestamp > now:
             break
     for i in range(len(data), count):
-        data.insert(1, copy.deepcopy(last_item))
+        # logging.info(last_item.timestamp)
         last_item.timestamp -= datetime.timedelta(seconds=cycles[type])
+        if missing_position > 0 and last_item.timestamp <= data[missing_position-1].timestamp:
+            break
+        else:
+            data.insert(missing_position, copy.deepcopy(last_item))
     return {
             'data': [t.toQueryObj() for t in data]
         }
