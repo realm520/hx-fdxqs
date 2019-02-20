@@ -228,6 +228,14 @@ class ContractHistory():
                         self.db.session.add(ContractExchangePair(contract_id=order['contractAddress'], tx_id=txid, \
                                 baseAssetSymbol=order['baseAssetSymbol'], quoteAssetSymbol=order['quoteAssetSymbol'], \
                                 block_num=int(block['number'])))
+                    elif contract_type == 'exchange' and (e['event_name'] == 'unboundExchangePairProposalApproved'):
+                        order = json.loads(e['event_arg'])
+                        pair = ContractExchangePair.query.\
+                                filter_by(baseAssetSymbol=order['baseAssetSymbol'], quoteAssetSymbol=order['quoteAssetSymbol']).first()
+                        if pair is None:
+                            logging.error("Missing registered EX pair: %s / %s" % (order['baseAssetSymbol'], order['quoteAssetSymbol']))
+                        else:
+                            self.db.session.delete(pair)
                     elif contract_type == 'exchange_personal':
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
                                 event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \
