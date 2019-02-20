@@ -199,7 +199,6 @@ class TxContractDepositWithdraw(db.Model):
                 "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "fee": self.fee}
 
 
-'''
 class TxContractDealHistory(db.Model):
     __tablename__ = 'tx_contract_deal_history'
     id = db.Column(db.Integer, primary_key=True)
@@ -222,8 +221,8 @@ class TxContractDealHistory(db.Model):
     def toQueryObj(self):
         return {"addr": self.address, "pair": self.ex_pair, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "block_num": self.block_num, \
-                "timestamp": self.timestamp}
-'''
+                "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
+
 
 class TxContractDealTick(db.Model):
     __tablename__ = 'tx_contract_deal_tick'

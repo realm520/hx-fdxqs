@@ -1,5 +1,4 @@
 import click
-from flask_cors import CORS
 import os
 import datetime
 import logging
@@ -14,7 +13,10 @@ from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30Min
 from flask_migrate import Migrate
 # from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
+from flask_cors import cross_origin, CORS
+from flask import make_response
 from logging.handlers import TimedRotatingFileHandler
+
 
 
 COV = None
@@ -24,10 +26,9 @@ if os.environ.get('FLASK_COVERAGE'):
     COV.start()
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
-cors = CORS(app, resources={r"/api": {"origins": "*"}})
+CORS(app)
 migrate = Migrate(app, db)
 # scheduler = APScheduler()
-jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
 log_fmt = '%(asctime)s\tFile \"%(filename)s\",line %(lineno)s\t%(levelname)s: %(message)s'
@@ -45,6 +46,18 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 # @app.route('/user/<name>')
 # def user(name):
 #     return '<h1>Hello, %s!<h1>' % name
+
+@cross_origin
+@app.route('/api', methods=['OPTIONS'])
+def options_api():
+    rst = make_response('')
+    rst.headers['Access-Control-Allow-Origin'] = '*'
+    rst.headers['Access-Control-Allow-Methods'] = 'PUT,GET,POST,DELETE,OPTIONS'
+    allow_headers = "Referer,Accept,Origin,User-Agent,Content-Type,X-TOKEN"
+    rst.headers['Access-Control-Allow-Headers'] = allow_headers
+    return rst
+
+jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
 @jsonrpc.method('hx.fdxqs.exchange.deposit.withdraw.query(addr=str, symbol=str, page=int, page_count=int)', validate=True)

@@ -8,7 +8,8 @@ import datetime
 from app.models import TxContractRawHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, AccountInfo, CrossChainAssetInOut, TxContractDealTick, \
-        kline_table_list, ContractExchangeOrder, TxContractDepositWithdraw, ContractExchangePair
+        kline_table_list, ContractExchangeOrder, TxContractDepositWithdraw, ContractExchangePair, \
+        TxContractDealHistory
 from sqlalchemy import func
 
 
@@ -78,7 +79,7 @@ class ContractHistory():
         TxContractRawHistory.query.filter(TxContractRawHistory.block_num>=block_num).delete()
         TxContractEventHistory.query.filter(TxContractEventHistory.block_num>=block_num).delete()
         ContractInfo.query.filter(ContractInfo.block_num>=block_num).delete()
-        # TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
+        TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
         for t in kline_table_list:
@@ -198,6 +199,9 @@ class ContractHistory():
                                 else:
                                     maker_tx.stat = 2
                                 self.db.session.add(maker_tx)
+                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
+                                    quote_amount=int(items[7]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                    timestamp=block['timestamp']))
                         for sells in order['transactionSells']:
                             items = sells.split(',')
                             maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3]).first()
@@ -211,6 +215,9 @@ class ContractHistory():
                                 else:
                                     maker_tx.stat = 2
                                 self.db.session.add(maker_tx)
+                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
+                                    quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                    timestamp=block['timestamp']))
                         if order['totalExchangeBaseAmount'] > 0:
                             self.db.session.add(TxContractDealTick(tx_id=txid, base_amount=int(order['totalExchangeBaseAmount']), \
                                     quote_amount=int(order['totalExchangeQuoteAmount']), ex_pair=order['exchangPair'], block_num=int(block['number']), \
