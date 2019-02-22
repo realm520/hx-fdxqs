@@ -221,7 +221,7 @@ class TxContractDealHistory(db.Model):
     def toQueryObj(self):
         return {"addr": self.address, "pair": self.ex_pair, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "block_num": self.block_num, \
-                "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
+                "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "ex_type": self.ex_type}
 
 
 class TxContractDealTick(db.Model):
@@ -267,7 +267,7 @@ class TxContractDealKdata1Min(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -292,7 +292,7 @@ class TxContractDealKdata5Min(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -317,7 +317,7 @@ class TxContractDealKdata15Min(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -342,7 +342,7 @@ class TxContractDealKdata30Min(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -367,7 +367,7 @@ class TxContractDealKdata1Hour(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -392,7 +392,7 @@ class TxContractDealKdata2Hour(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -417,7 +417,7 @@ class TxContractDealKdata6Hour(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -442,7 +442,7 @@ class TxContractDealKdata12Hour(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -467,7 +467,7 @@ class TxContractDealKdataDaily(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -492,7 +492,7 @@ class TxContractDealKdataWeekly(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 
@@ -517,7 +517,7 @@ class TxContractDealKdataMonthly(db.Model):
     
     def toQueryObj(self):
         return {"ex_pair": self.ex_pair, "k_open": self.k_open, "k_close": self.k_close, "k_low": self.k_low, \
-                "k_high": self.k_high, "block_num": self.block_num, "base_amount": self.base_amount, \
+                "k_high": self.k_high, "base_amount": self.base_amount, \
                 "quote_amount": self.quote_amount, "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 

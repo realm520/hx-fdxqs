@@ -5,7 +5,7 @@ import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractPersonExchangeEvent, ContractExchangeOrder, \
+        ContractPersonExchangeEvent, ContractExchangeOrder, TxContractDealHistory, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
 from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
@@ -78,12 +78,12 @@ def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10
         }
 
 
-@jsonrpc.method('hx.fdxqs.exchange.deal.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
-def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
+@jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
+def hx_fdxqs_exchange_order_query(addr, pair, page=1, page_count=10):
     """
     Query all orders by address
     """
-    logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
+    logging.info("[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
     data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
             order_by(ContractExchangeOrder.id.desc()).paginate(page, page_count, False)
     return {
@@ -95,8 +95,21 @@ def hx_fdxqs_exchange_deal_query(addr, pair, page=1, page_count=10):
         }
 
 
-@jsonrpc.method('hx.fdxqs.order.query(from_asset=str, to_asset=str, page=int, page_count=int)')
-def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
+@jsonrpc.method('hx.fdxqs.exchange.deal.query(pair=str, count=int)', validate=True)
+def hx_fdxqs_exchange_deal_query(pair, count=10):
+    """
+    Query all orders by address
+    """
+    logging.info("[hx.fdxqs.exchange.deal.query] - pair: %s, count: %d" % (pair, count))
+    data = TxContractDealHistory.query.filter_by(ex_pair=pair).\
+            order_by(TxContractDealHistory.timestamp.desc()).limit(count).all()
+    return {
+            'data': [t.toQueryObj() for t in data]
+        }
+
+
+@jsonrpc.method('hx.fdxqs.otc.order.query(from_asset=str, to_asset=str, page=int, page_count=int)')
+def hx_fdxqs_otc_order_query(from_asset, to_asset, page=1, page_count=10):
     logging.info('[hx.fdxqs.order.query] - from_asset: %s, to_asset: %s, page: %d, page_count: %d' % (from_asset, to_asset, page, page_count))
     data = ContractPersonExchangeOrder.query.filter_by(from_asset=from_asset, to_asset=to_asset).\
             order_by(ContractPersonExchangeOrder.price).paginate(page, page_count, False)
@@ -110,7 +123,10 @@ def hx_fdxqs_order_query(from_asset, to_asset, page=1, page_count=10):
 
 
 @jsonrpc.method('hx.fdxqs.exchange.kline.query(pair=str, type=int, count=int)', validate=True)
-def exchange_bid_query(pair, type, count=100):
+def hx_fdxqs_kline_query(pair, type, count=100):
+    """
+    @param type - kline cycle type (0: 1-min, 1: 5-min, 2: 15-min, 3: 30-min, 4: 1-hour, 5: 2-hour, 6: 6-hour, 7: 12-hour, 8: 1-day, 9: 1-week, 10: 1-month)
+    """
     import copy
     if type < 0 or type >= len(kline_table_list):
         return {
@@ -124,7 +140,6 @@ def exchange_bid_query(pair, type, count=100):
     missing_position = 0
     data = table.query.filter(table.ex_pair==pair, table.timestamp>=start).\
             order_by(kline_table_list[type].timestamp).all()
-    logging.info(len(data))
     if len(data) == 0:
         data = table.query.filter(table.ex_pair==pair).\
             order_by(kline_table_list[type].block_num.desc()).limit(1).all()
@@ -133,18 +148,24 @@ def exchange_bid_query(pair, type, count=100):
             data[0].quote_amount = 0
     else:
         missing_position = len(data)
-    logging.info(missing_position)
-    logging.info(data[0].timestamp)
+    logging.info("missing_position: %d" % missing_position)
+    logging.info("timestamp: %s" % data[0].timestamp)
+    logging.info("len(data): %d" % len(data))
     if data is None or len(data) == 0:
         return {'data': []}
     last_item = copy.deepcopy(data[len(data)-1])
     last_item.base_amount = 0
     last_item.quote_amount = 0
+    last_item.k_open = last_item.k_close
+    last_item.k_high = last_item.k_close
+    last_item.k_low = last_item.k_close
     while True:
         last_item.timestamp += datetime.timedelta(seconds=cycles[type])
         if last_item.timestamp > now:
             break
-    for i in range(len(data), count):
+    if missing_position == 0:
+        data = []
+    for i in range(missing_position, count):
         # logging.info(last_item.timestamp)
         last_item.timestamp -= datetime.timedelta(seconds=cycles[type])
         if missing_position > 0 and last_item.timestamp <= data[missing_position-1].timestamp:
@@ -218,27 +239,25 @@ def rpc_test(method, args):
     print(str(rsp))
 
 
-@app.cli.command('update_kline')
-@click.option('--times', default=1, type=int, help='scan times')
-def update_kline(times):
+def update_kline_real(times):
     from app.models import TxContractDealKdata5Min, TxContractDealKdata15Min, \
             TxContractDealKdata30Min, TxContractDealKdataDaily, TxContractDealKdata6Hour, \
             TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, \
             TxContractDealKdataMonthly
     def process_kline_common(base_table, target_table, process_obj, pair='HC/HX'):
-        logging.info("base: %s, target: %s, pair: %s" % (str(base_table), str(target_table), pair))
-        k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.block_num.desc()).first()
+        logging.debug("base: %s, target: %s, pair: %s" % (str(base_table), str(target_table), pair))
+        k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.timestamp.desc()).first()
         k = process_obj(k_last)
         if k_last is None:
-            last_block_num = 0
+            last_time = datetime.datetime.now() - datetime.timedelta(days=1)
         else:
-            last_block_num = k_last.block_num
-        logging.info("last block num: %d" % (last_block_num))
-        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.block_num>=last_block_num).order_by(base_table.id).all()
+            last_time = k_last.timestamp
+        logging.debug("last time: %s" % (last_time))
+        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>=last_time).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
         if k_last is not None:
-            target_table.query.filter_by(block_num=k_last.block_num).delete()
+            target_table.query.filter_by(timestamp=k_last.timestamp).delete()
         for r in k.get_k_data():
             db.session.add(target_table(ex_pair=pair, k_open=r['k_open'], k_close=r['k_close'], \
                     k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
@@ -271,9 +290,16 @@ def update_kline(times):
         process_kline_common(TxContractDealKdataDaily, TxContractDealKdataMonthly, KLineMonthlyObj, ex_pair)
 
 
+@app.cli.command('update_kline')
+@click.option('--times', default=1, type=int, help='scan times')
+def update_kline(times):
+    update_kline_real(times)
+
+
 @app.cli.command('scan_block')
 @click.option('--times', default=1, type=int, help='scan times')
-def scan_block(times):
+@click.option('--kline', default=0, type=int, help='update kline data')
+def scan_block(times, kline):
     from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
     total = 0
@@ -282,7 +308,10 @@ def scan_block(times):
         ch.scan_block()
         time.sleep(5)
         total += 1
-    print("scan block finished")
+        if kline == 1:
+            update_kline_real(1)
+            logging.info("Update kline data finished")
+    logging.info("Scan block finished")
 
 
 @app.cli.command('scan_person_exchange')
@@ -290,7 +319,7 @@ def scan_person_exchange():
     from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
     ch.exchange_person_orders(1)
-    print("scan contract finished")
+    logging.info("scan contract finished")
 
 
 @app.cli.command()

@@ -234,7 +234,7 @@ class ContractHistory():
                         order = json.loads(e['event_arg'])
                         self.db.session.add(ContractExchangePair(contract_id=order['contractAddress'], tx_id=txid, \
                                 baseAssetSymbol=order['baseAssetSymbol'], quoteAssetSymbol=order['quoteAssetSymbol'], \
-                                block_num=int(block['number'], stat=1)))
+                                block_num=int(block['number']), stat=1))
                     elif contract_type == 'exchange' and (e['event_name'] == 'unboundExchangePairProposalApproved'):
                         order = json.loads(e['event_arg'])
                         pair = ContractExchangePair.query.\
