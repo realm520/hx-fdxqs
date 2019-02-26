@@ -85,7 +85,7 @@ def hx_fdxqs_exchange_order_query(addr, pair, page=1, page_count=10):
     """
     logging.info("[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, offset: %d, limit: %d" % (addr, pair, page, page_count))
     data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
-            order_by(ContractExchangeOrder.id.desc()).paginate(page, page_count, False)
+            order_by(ContractExchangeOrder.timestamp.desc()).paginate(page, page_count, False)
     return {
             'total_records': data.total,
             'per_page': data.per_page,
@@ -187,19 +187,6 @@ def exchange_bid_query(pair, type, page=1, page_count=10):
             'data': [t.toQueryObj() for t in data.items]
         }
 '''
-
-@jsonrpc.method('hx.fdxqs.exchange.order.query(addr=str, pair=str, page=int, page_count=int)', validate=True)
-def exchange_cancel_query(addr, pair, page=1, page_count=10):
-    logging.info('[hx.fdxqs.exchange.order.query] - addr: %s, pair: %s, page: %d, page_count: %d' % (addr, pair, page, page_count))
-    data = ContractExchangeOrder.query.filter_by(address=addr, ex_pair=pair).\
-            order_by(ContractExchangeOrder.current_quote_amount/ContractExchangeOrder.current_base_amount).paginate(page, page_count, False)
-    return {
-            'total_records': data.total,
-            'per_page': data.per_page,
-            'total_pages': data.pages,
-            'current_page': data.page,
-            'data': [t.toQueryObj() for t in data.items]
-        }
 
 
 @app.shell_context_processor
