@@ -5,7 +5,7 @@ import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractPersonExchangeEvent, ContractExchangeOrder, TxContractDealHistory, \
+        ContractExchangeOrder, TxContractDealHistory, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
 from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
@@ -176,17 +176,32 @@ def hx_fdxqs_kline_query(pair, type, count=100):
             'data': [t.toQueryObj() for t in data]
         }
 
-'''
-@jsonrpc.method('hx.fdxqs.exchange.coin.market()', validate=True)
-def exchange_bid_query(pair, type, page=1, page_count=10):
-    return {
-            'total_records': data.total,
-            'per_page': data.per_page,
-            'total_pages': data.pages,
-            'current_page': data.page,
-            'data': [t.toQueryObj() for t in data.items]
-        }
-'''
+
+@jsonrpc.method('hx.fdxqs.exchange.pair.summary()', validate=True)
+def hx_fdxqs_exchange_pair_summary():
+    data = ContractExchangePair.query.filter_by(stat=1).all()
+    pairs = [r.baseAssetSymbol+'/'+r.quoteAssetSymbol for r in data]
+    now = datetime.datetime.now()
+    last_day = now - datetime.timedelta(days=1)
+    summary = []
+    for p in pairs:
+        logging.info(p)
+        data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==p,TxContractDealKdata1Min.timestamp>last_day).order_by(TxContractDealKdata1Min.timestamp.desc()).all()
+        if len(data) > 0:
+            priceLastDay = data[0].k_close
+            priceNow = data[len(data)-1].k_close
+            volume = data[len(data)-1].base_amount
+            percent = (priceNow - priceLastDay) / priceLastDay
+        else:
+            data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==p).order_by(TxContractDealKdata1Min.timestamp.desc()).limit(1).first()
+            if data is None:
+                continue
+            priceLastDay = data.k_close
+            priceNow = data.k_close
+            volume = 0
+            percent = 0
+        summary.append({'pair': p, 'priceNow': priceNow, 'priceLastDay': priceLastDay, 'volume': volume, 'percent': percent})
+    return summary
 
 
 @app.shell_context_processor
@@ -199,7 +214,6 @@ def make_shell_context():
 def cleardb(block):
     #TODO, process order tables rollback.
     table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
-            ContractPersonExchangeEvent, ContractExchangeOrder, ContractExchangePair, \
             TxContractDealTick, AccountInfo]
     # ContractPersonExchangeOrder, 
     table_to_clear += kline_table_list
@@ -250,7 +264,7 @@ def update_kline_real(times):
                     k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
                     block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
 
-    pairs = ContractExchangePair.query.all()
+    pairs = ContractExchangePair.query.filter_by(stat=1).all()
     for p in pairs:
         ex_pair = p.baseAssetSymbol+"/"+p.quoteAssetSymbol
         # Process 1-minute K-Line
