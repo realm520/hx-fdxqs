@@ -10,6 +10,7 @@ from app.models import TxContractRawHistory, ServiceConfig, \
 from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
         KLine6HourObj, KLine12HourObj, KLineWeeklyObj, KLineDailyObj, KLineMonthlyObj
+from app.contract_history import ContractHistory
 from flask_migrate import Migrate
 # from flask_apscheduler import APScheduler
 from flask_jsonrpc import JSONRPC
@@ -214,7 +215,7 @@ def make_shell_context():
 def cleardb(block):
     #TODO, process order tables rollback.
     table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
-            TxContractDealTick, AccountInfo]
+            AccountInfo]
     # ContractPersonExchangeOrder, 
     table_to_clear += kline_table_list
     for t in table_to_clear:
@@ -234,7 +235,6 @@ def cleardb(block):
 @click.argument('method')
 @click.argument('args')
 def rpc_test(method, args):
-    from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
     rsp = ch.http_request(method, [args])
     print(str(rsp))
@@ -250,10 +250,11 @@ def update_kline_real(times):
         k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.timestamp.desc()).first()
         k = process_obj(k_last)
         if k_last is None:
-            last_time = datetime.datetime.now() - datetime.timedelta(days=1)
+            # if str(base_table) == "<class 'app.models.TxContractDealTick'>":
+            last_time = datetime.datetime.now() - datetime.timedelta(days=365)
         else:
             last_time = k_last.timestamp
-        logging.debug("last time: %s" % (last_time))
+        logging.info("last time: %s" % (last_time))
         ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>=last_time).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
@@ -301,7 +302,6 @@ def update_kline(times):
 @click.option('--times', default=1, type=int, help='scan times')
 @click.option('--kline', default=0, type=int, help='update kline data')
 def scan_block(times, kline):
-    from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
     total = 0
     import time
@@ -317,7 +317,6 @@ def scan_block(times, kline):
 
 @app.cli.command('scan_person_exchange')
 def scan_person_exchange():
-    from app.contract_history import ContractHistory
     ch = ContractHistory(app.config, db)
     ch.exchange_person_orders(1)
     logging.info("scan contract finished")
