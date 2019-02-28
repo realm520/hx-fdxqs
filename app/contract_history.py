@@ -201,7 +201,7 @@ class ContractHistory():
                                         maker_tx.stat = 2
                                     self.db.session.add(maker_tx)
                                 self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
-                                        quote_amount=int(items[7]), ex_type='buy', ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                        quote_amount=int(items[7]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                         timestamp=block['timestamp']))
                         elif order['OrderType'] == 'buy':
                             for sells in order['transactionSells']:
@@ -218,7 +218,7 @@ class ContractHistory():
                                         maker_tx.stat = 2
                                     self.db.session.add(maker_tx)
                                 self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
-                                        quote_amount=int(items[7]), ex_type='sell', ex_pair=order['exchangPair'], block_num=int(block['number']), \
+                                        quote_amount=int(items[7]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                         timestamp=block['timestamp']))
                         if order['totalExchangeBaseAmount'] > 0:
                             self.db.session.add(TxContractDealTick(tx_id=txid, base_amount=int(order['totalExchangeBaseAmount']), \
