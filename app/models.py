@@ -15,6 +15,21 @@ class ServiceConfig(db.Model):
         return '<ServiceConfig %r>' % self.key
 
 
+class PersonalSettings(db.Model):
+    __tablename__ = 'personal_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    address = db.Column(db.String(64), unique=True, index=True)
+    settings = db.Column(db.Text, default=False)
+
+    def __init__(self, **kwargs):
+        super(PersonalSettings, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<PersonalSettings %r>' % self.address
+
+    def toQueryObj(self):
+        return {"id": self.id, "address": self.address, "settings": self.settings}
+
 
 class TxContractRawHistory(db.Model):
     __tablename__ = 'tx_contract_raw_history'

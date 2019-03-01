@@ -5,7 +5,7 @@ import logging
 from app import create_app, db
 from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractExchangeOrder, TxContractDealHistory, \
+        ContractExchangeOrder, TxContractDealHistory, PersonalSettings, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
 from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
@@ -59,6 +59,27 @@ def options_api():
     return rst
 
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
+
+
+@jsonrpc.method('hx.fdxqs.exchange.settings.query(addr=str)', validate=True)
+def hx_fdxqs_exchange_settings_query(addr):
+    data = PersonalSettings.query.filter_by(address=addr).first()
+    if data is None:
+        return {}
+    else:
+        return data.toQueryObj()
+
+
+@jsonrpc.method('hx.fdxqs.exchange.settings.modify(addr=str, settings=str)', validate=True)
+def hx_fdxqs_exchange_settings_modify(addr, settings):
+    #TODO, validate settings
+    data = PersonalSettings.query.filter_by(address=addr).first()
+    if data is None:
+        return {'result': False}
+    else:
+        data.settings = settings
+        db.session.add(data)
+        return {'result': True}
 
 
 @jsonrpc.method('hx.fdxqs.exchange.deposit.withdraw.query(addr=str, symbol=str, page=int, page_count=int)', validate=True)
@@ -196,9 +217,11 @@ def hx_fdxqs_exchange_pair_summary():
         else:
             data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==p).order_by(TxContractDealKdata1Min.timestamp.desc()).limit(1).first()
             if data is None:
-                continue
-            priceLastDay = data.k_close
-            priceNow = data.k_close
+                priceLastDay = 0
+                priceNow = 0
+            else:
+                priceLastDay = data.k_close
+                priceNow = data.k_close
             volume = 0
             percent = 0
         summary.append({'pair': p, 'priceNow': priceNow, 'priceLastDay': priceLastDay, 'volume': volume, 'percent': percent})
@@ -246,7 +269,7 @@ def update_kline_real(times):
             TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, \
             TxContractDealKdataMonthly
     def process_kline_common(base_table, target_table, process_obj, pair='HC/HX'):
-        logging.debug("base: %s, target: %s, pair: %s" % (str(base_table), str(target_table), pair))
+        logging.info("base: %s, target: %s, pair: %s" % (str(base_table), str(target_table), pair))
         k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.timestamp.desc()).first()
         k = process_obj(k_last)
         if k_last is None:
@@ -254,8 +277,8 @@ def update_kline_real(times):
             last_time = datetime.datetime.now() - datetime.timedelta(days=365)
         else:
             last_time = k_last.timestamp
-        logging.info("last time: %s" % (last_time))
-        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>=last_time).order_by(base_table.id).all()
+        # logging.info("last time: %s" % (last_time))
+        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>last_time).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
         if k_last is not None:
@@ -293,7 +316,7 @@ def update_kline_real(times):
 
 
 @app.cli.command('update_kline')
-@click.option('--times', default=1, type=int, help='scan times')
+@click.option('--times', default=1, type=int, help='update times')
 def update_kline(times):
     update_kline_real(times)
 
