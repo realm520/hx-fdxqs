@@ -16,8 +16,10 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    HX_RPC_ENDPOINT = "http://127.0.0.1:50321"
-    CONTRACT_CALLER = 'ai'
+    # HX_RPC_ENDPOINT = "http://127.0.0.1:50321"
+    HX_RPC_ENDPOINT = "http://192.168.1.121:30088"
+    CONTRACT_EXCHANGE_ID = [r'HXCVxQzP5Bg1pmGnp9ddDf8B7pv2A79QqqTu', r'HXCGzXcFfPDwd1BHQj8VzBS9roLjkCdaGwUN', r'HXCXG2jDRCpLREUZ5ATwskeyBM35N1sXtC1t', r'HXCXGWuLefoZN6ACF4FCE6C3f4XKUFgXjAHr']
+    CONTRACT_CALLER = 'senator2'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
 
@@ -32,6 +34,7 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     HX_RPC_ENDPOINT = "http://127.0.0.1:8099"
     CONTRACT_CALLER = 'order'
+    CONTRACT_EXCHANGE_ID = ["HXCUXnahWaciq1BDVHTq4KVmBjEWa9diMyLv"]
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'postgresql://fdxqs:HyperExchange2019#@localhost/fdxqs'
 
