@@ -34,7 +34,7 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     HX_RPC_ENDPOINT = "http://127.0.0.1:8099"
     CONTRACT_CALLER = 'order'
-    CONTRACT_EXCHANGE_ID = ["HXCUXnahWaciq1BDVHTq4KVmBjEWa9diMyLv"]
+    CONTRACT_EXCHANGE_ID = ["HXCRCnJ8AV624UZBLNKz4UBweVbhVXkQfNe7"]
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'postgresql://fdxqs:HyperExchange2019#@localhost/fdxqs'
 
