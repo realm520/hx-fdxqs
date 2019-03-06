@@ -2,6 +2,7 @@ import click
 import os
 import datetime
 import logging
+from sqlalchemy import or_
 from app import create_app, db
 from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
@@ -97,6 +98,30 @@ def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10
             'total_pages': data.pages,
             'current_page': data.page,
             'data': [t.toQueryObj() for t in data.items]
+        }
+
+
+@jsonrpc.method('hx.fdxqs.exchange.market.query(pair=str, depth=int)', validate=True)
+def hx_fdxqs_exchange_market_query(pair, depth=5):
+    merge_precisions = {'HC/HX': 4, 'HC/PAX': 4, 'HX/PAX': 34, 'BTC/PAX': 4, 'LTC/PAX': 4, 'ETH/PAX': 4}
+    logging.info("[hx.fdxqs.exchange.market.query] - pair: %s, depth: %d" % (pair, depth))
+    data = ContractExchangeOrder.query.filter(ContractExchangeOrder.ex_pair==pair, or_(ContractExchangeOrder.stat==1, ContractExchangeOrder.stat==2)).\
+            order_by(ContractExchangeOrder.timestamp.desc()).all()
+    result = {'buy': {}, 'sell': {}}
+    for d in data:
+        if d.ex_pair.split('/')[0] == 'HX':
+            precision = 100000
+        else:
+            precision = 100000000
+        price = round(float(d.current_base_amount) / float(d.current_quote_amount), merge_precisions[d.ex_pair])
+        market = result[d.ex_type]
+        if market.get(price) is None:
+            if len(market) < depth:
+                market[price] = float(d.current_base_amount) / precision
+        else:
+            market[price] += float(d.current_base_amount) / precision
+    return {
+            'data': result
         }
 
 
