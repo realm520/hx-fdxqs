@@ -12,14 +12,14 @@ class KLine1MinObj():
         self.k_objs = []
         self.current_k_obj_idx = -1
         if k_obj is not None:
-            logging.debug("base_amount: %d, quote_amount: %d, timestamp: %s, len: %d" % (k_obj.base_amount, k_obj.quote_amount, k_obj.timestamp, len(self.k_objs)))
+            logging.debug("pair: %s, base_amount: %d, quote_amount: %d, timestamp: %s, len: %d" % (k_obj.ex_pair, k_obj.base_amount, k_obj.quote_amount, k_obj.timestamp, len(self.k_objs)))
             self.k_objs.append({
                 'k_open': k_obj.k_open,
                 'k_close': k_obj.k_close,
                 'k_low': k_obj.k_low,
                 'k_high': k_obj.k_high,
-                'base_amount': k_obj.base_amount,
-                'quote_amount': k_obj.quote_amount,
+                'base_amount': 0,
+                'quote_amount': 0,
                 'block_num': k_obj.block_num,
                 'start_time': k_obj.timestamp})
             self.current_k_obj_idx = 0

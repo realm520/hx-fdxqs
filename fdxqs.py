@@ -269,7 +269,7 @@ def update_kline_real(times):
             TxContractDealKdata1Hour, TxContractDealKdata2Hour, TxContractDealKdata12Hour, \
             TxContractDealKdataMonthly
     def process_kline_common(base_table, target_table, process_obj, pair='HC/HX'):
-        logging.info("base: %s, target: %s, pair: %s" % (str(base_table), str(target_table), pair))
+        logging.debug("base: %s, target: %s, pair: %s" % (str(base_table), str(target_table), pair))
         k_last = target_table.query.filter_by(ex_pair=pair).order_by(target_table.timestamp.desc()).first()
         k = process_obj(k_last)
         if k_last is None:
@@ -278,7 +278,7 @@ def update_kline_real(times):
         else:
             last_time = k_last.timestamp
         # logging.info("last time: %s" % (last_time))
-        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>last_time).order_by(base_table.id).all()
+        ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>=last_time).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
         if k_last is not None:
