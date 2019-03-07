@@ -180,7 +180,7 @@ class ContractExchangeOrder(db.Model):
         super(ContractExchangeOrder, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<ContractExchangeOrder %r>' % self.contract_address
+        return '<ContractExchangeOrder %r>' % self.id
     
     def toQueryObj(self):
         return {"current_base_amount": self.current_base_amount, "current_quote_amount": self.current_quote_amount, \
