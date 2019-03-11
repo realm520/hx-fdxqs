@@ -250,9 +250,9 @@ class ContractHistory():
                             self.db.session.add(maker_tx)
                             assets = maker_tx.ex_pair.split('/')
                             if maker_tx.ex_type == 'buy':
-                                self.update_balance(maker_tx.address, assets[1], -1*int(items[1]))
+                                self.update_balance(maker_tx.address, assets[1], -1*maker_tx.current_quote_amount)
                             elif maker_tx.ex_type == 'sell':
-                                self.update_balance(maker_tx.address, assets[0], -1*int(items[0]))
+                                self.update_balance(maker_tx.address, assets[0], -1*maker_tx.current_base_amount)
                     elif contract_type == 'exchange' and (e['event_name'] == 'exchangePairOn'):
                         order = json.loads(e['event_arg'])
                         self.db.session.add(ContractExchangePair(contract_id=order['contractAddress'], tx_id=txid, \
