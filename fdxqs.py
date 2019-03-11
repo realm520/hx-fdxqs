@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from app import create_app, db
 from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
-        ContractExchangeOrder, TxContractDealHistory, PersonalSettings, \
+        ContractExchangeOrder, TxContractDealHistory, PersonalSettings, UserBalance, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
 from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
@@ -61,6 +61,12 @@ def options_api():
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
+@jsonrpc.method('hx.fdxqs.exchange.balance.query(addr=str)', validate=True)
+def hx_fdxqs_exchange_settings_query(addr):
+    data = UserBalance.query.filter_by(address=addr).all()
+    return {'data': [t.toQueryObj() for t in data]}
+
+
 @jsonrpc.method('hx.fdxqs.exchange.settings.query(addr=str)', validate=True)
 def hx_fdxqs_exchange_settings_query(addr):
     data = PersonalSettings.query.filter_by(address=addr).first()
@@ -84,7 +90,7 @@ def hx_fdxqs_exchange_settings_modify(addr, settings):
 
 @jsonrpc.method('hx.fdxqs.exchange.deposit.withdraw.query(addr=str, symbol=str, page=int, page_count=int)', validate=True)
 def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10):
-    logging.info("[hx.fdxqs.exchange.deal.query] - addr: %s, symbol: %s, offset: %d, limit: %d" % (addr, symbol, page, page_count))
+    logging.info("[hx.fdxqs.exchange.deposit.withdraw.query] - addr: %s, symbol: %s, offset: %d, limit: %d" % (addr, symbol, page, page_count))
     if len(symbol) > 0:
         data = TxContractDepositWithdraw.query.filter_by(address=addr, asset_symbol=symbol).\
                 order_by(TxContractDepositWithdraw.block_num.desc()).paginate(page, page_count, False)
@@ -277,7 +283,7 @@ def make_shell_context():
 def cleardb(block):
     #TODO, process order tables rollback.
     table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
-            AccountInfo]
+            AccountInfo, UserBalance]
     # ContractPersonExchangeOrder, 
     table_to_clear += kline_table_list
     for t in table_to_clear:

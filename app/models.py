@@ -161,6 +161,26 @@ class CrossChainAssetInOut(db.Model):
                 "timestamp": self.timestamp, "combine_tx_id": self.combine_tx_id}
 
 
+class UserBalance(db.Model):
+    __tablename__ = 'user_balance'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    asset_symbol = db.Column(db.String(64))
+    address = db.Column(db.String(64))
+    contract_id = db.Column(db.String(64), index=True)
+    balance = db.Column(db.BigInteger)
+    frozen = db.Column(db.BigInteger)
+
+    def __init__(self, **kwargs):
+        super(UserBalance, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<UserBalance %r>' % self.address
+    
+    def toQueryObj(self):
+        return {"id": self.id, "asset_symbol": self.asset_symbol, "contract_id": self.contract_id, \
+                "address": self.address, "balance": self.balance, "frozen": self.frozen}
+
+
 class ContractExchangeOrder(db.Model):
     __tablename__ = 'contract_exchange_order'
     id = db.Column(db.Integer, primary_key=True)
@@ -194,6 +214,7 @@ class TxContractDepositWithdraw(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tx_id = db.Column(db.String(64), index=True)
     address = db.Column(db.String(64), index=True)
+    contract_id = db.Column(db.String(64), index=True)
     amount = db.Column(db.BigInteger)
     fee = db.Column(db.BigInteger)
     asset_type = db.Column(db.String(8), index=True)
@@ -211,6 +232,7 @@ class TxContractDepositWithdraw(db.Model):
         return {"tx_id": self.tx_id, "amount": self.amount, \
                 "asset_type": self.asset_type, "block_num": self.block_num, \
                 "asset_symbol": self.asset_symbol, "address": self.address, \
+                "contract_id": self.contract_id, \
                 "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "fee": self.fee}
 
 
