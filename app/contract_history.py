@@ -227,6 +227,7 @@ class ContractHistory():
                                 else:
                                     maker_tx.stat = 2
                                 self.db.session.add(maker_tx)
+                                assets = maker_tx.ex_pair.split('/')
                                 if maker_tx.ex_type == 'buy':
                                     self.update_balance(maker_tx.address, assets[0], -1*int(items[6]))
                                 elif maker_tx.ex_type == 'sell':
@@ -247,6 +248,7 @@ class ContractHistory():
                         else:
                             maker_tx.stat = 4
                             self.db.session.add(maker_tx)
+                            assets = maker_tx.ex_pair.split('/')
                             if maker_tx.ex_type == 'buy':
                                 self.update_balance(maker_tx.address, assets[1], -1*int(items[1]))
                             elif maker_tx.ex_type == 'sell':
