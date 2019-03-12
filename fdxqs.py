@@ -248,7 +248,7 @@ def hx_fdxqs_kline_query(pair, type, count=100):
 def hx_fdxqs_exchange_pair_summary():
     data = ContractExchangePair.query.filter_by(stat=1).all()
     pairs = [r.baseAssetSymbol+'/'+r.quoteAssetSymbol for r in data]
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
     last_day = now - datetime.timedelta(days=1)
     summary = []
     for p in pairs:
@@ -319,7 +319,7 @@ def update_kline_real(times):
         k = process_obj(k_last)
         if k_last is None:
             # if str(base_table) == "<class 'app.models.TxContractDealTick'>":
-            last_time = datetime.datetime.now() - datetime.timedelta(days=365)
+            last_time = datetime.datetime.utcnow() - datetime.timedelta(days=365)
         else:
             last_time = k_last.timestamp
         # logging.info("last time: %s" % (last_time))
