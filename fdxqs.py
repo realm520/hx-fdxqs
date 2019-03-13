@@ -71,7 +71,13 @@ def hx_fdxqs_exchange_announcement_list_query():
 def hx_fdxqs_exchange_announcement_list_query(id):
     data = Announcements.query.filter_by(id=id).first()
     return {
-        'data': {'id': data.id, 'title': data.title, 'level': data.level, 'category': data.category} if data is not None else {}
+        'data': {
+            'id': data.id,
+            'title': data.title,
+            'level': data.level,
+            'category': data.category,
+            'text': data.content
+        } if data is not None else {}
     }
 
 
