@@ -2,6 +2,22 @@ from . import db
 
 
 
+class Anouncements(db.Model):
+    __tablename__ = 'anouncement'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(256), index=True)
+    level = db.Column(db.Integer)
+    category = db.Column(db.Integer)
+    content = db.Column(db.Text, default=False)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(Anouncements, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<Anouncements %r>' % self.id
+
+
 class ServiceConfig(db.Model):
     __tablename__ = 'service_config'
     id = db.Column(db.Integer, primary_key=True)
