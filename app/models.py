@@ -2,8 +2,8 @@ from . import db
 
 
 
-class Anouncements(db.Model):
-    __tablename__ = 'anouncement'
+class Announcements(db.Model):
+    __tablename__ = 'announcement'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(256), index=True)
     level = db.Column(db.Integer)
@@ -12,10 +12,10 @@ class Anouncements(db.Model):
     timestamp = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
-        super(Anouncements, self).__init__(**kwargs)
+        super(Announcements, self).__init__(**kwargs)
 
     def __repr__(self):
-        return '<Anouncements %r>' % self.id
+        return '<Announcements %r>' % self.id
 
 
 class ServiceConfig(db.Model):

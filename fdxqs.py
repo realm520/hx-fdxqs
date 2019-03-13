@@ -8,7 +8,7 @@ from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
         ContractExchangeOrder, TxContractDealHistory, PersonalSettings, UserBalance, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
-from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair
+from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair, Announcements
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
         KLine6HourObj, KLine12HourObj, KLineWeeklyObj, KLineDailyObj, KLineMonthlyObj
 from app.contract_history import ContractHistory
@@ -59,6 +59,20 @@ def options_api():
     return rst
 
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
+
+
+@jsonrpc.method('hx.fdxqs.exchange.announcement.list.query()', validate=True)
+def hx_fdxqs_exchange_announcement_list_query():
+    data = Announcements.query.order_by(Announcements.timestamp.desc()).all()
+    return {'data': [{'id': t.id, 'title': t.title, 'level': t.level, 'category': t.category} for t in data]}
+
+
+@jsonrpc.method('hx.fdxqs.exchange.announcement.query(id=int)', validate=True)
+def hx_fdxqs_exchange_announcement_list_query(id):
+    data = Announcements.query.filter_by(id=id).first()
+    return {
+        'data': {'id': data.id, 'title': data.title, 'level': data.level, 'category': data.category} if data is not None else {}
+    }
 
 
 @jsonrpc.method('hx.fdxqs.exchange.balance.query(addr=str)', validate=True)
