@@ -141,7 +141,7 @@ class ContractExchangePair(db.Model):
         return '<ContractExchangePair %r>' % self.tx_id
     
     def toQueryObj(self):
-        return {"contract_id": self.contract_id, "tx_id": self.tx_id, \
+        return {"id": self.id, "contract_id": self.contract_id, "tx_id": self.tx_id, \
                 "baseAssetSymbol": self.baseAssetSymbol, "quoteAssetSymbol": self.quoteAssetSymbol, \
                 "block_num": self.block_num, "stat": self.stat}
 
