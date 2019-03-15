@@ -76,7 +76,8 @@ def hx_fdxqs_exchange_announcement_list_query(id):
             'title': data.title,
             'level': data.level,
             'category': data.category,
-            'text': data.content
+            'text': data.content,
+            'timestamp': timestamp.strftime("%Y-%m-%d %H:%M:%S")
         } if data is not None else {}
     }
 
