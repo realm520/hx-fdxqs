@@ -101,11 +101,11 @@ def hx_fdxqs_exchange_settings_modify(addr, settings):
     #TODO, validate settings
     data = PersonalSettings.query.filter_by(address=addr).first()
     if data is None:
-        return {'result': False}
+        db.session.add(PersonalSettings(address=addr, settings=settings))
     else:
         data.settings = settings
         db.session.add(data)
-        return {'result': True}
+    return {'result': True}
 
 
 @jsonrpc.method('hx.fdxqs.exchange.deposit.withdraw.query(addr=str, symbol=str, page=int, page_count=int)', validate=True)
