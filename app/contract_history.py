@@ -145,7 +145,6 @@ class ContractHistory():
             else:
                 self.db.session.add(UserBalance(asset_symbol=asset, address=address, balance=amount, frozen=0))
         else:
-            logging.info("%s, %d" % (address, amount))
             if update_type == 0 or update_type == 2:
                 base.balance += amount
             if update_type == 1 or update_type == 2:
@@ -235,7 +234,8 @@ class ContractHistory():
                                     self.update_balance(maker_tx.address, assets[0], -1*int(items[6]), 1)
                                     self.update_balance(maker_tx.address, assets[1], int(items[7]), 0)
                             #FIXME, the deal history may be duplicated.
-                            self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
+                            if txid != match_tx_id:
+                                self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
                         if order['totalExchangeBaseAmount'] > 0:
