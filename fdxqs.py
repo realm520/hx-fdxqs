@@ -77,7 +77,7 @@ def hx_fdxqs_exchange_announcement_list_query(id):
             'level': data.level,
             'category': data.category,
             'text': data.content,
-            'timestamp': timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            'timestamp': data.timestamp.strftime("%Y-%m-%d %H:%M:%S")
         } if data is not None else {}
     }
 
@@ -274,12 +274,19 @@ def hx_fdxqs_exchange_pair_summary():
     summary = []
     for p in pairs:
         logging.info(p)
+        priceMax = 0
+        priceMin = 0
         data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==p,TxContractDealKdata1Min.timestamp>last_day).order_by(TxContractDealKdata1Min.timestamp.desc()).all()
         if len(data) > 0:
             priceLastDay = data[0].k_close
             priceNow = data[len(data)-1].k_close
             volume = data[len(data)-1].base_amount
             percent = (priceNow - priceLastDay) / priceLastDay
+            for d in data:
+                if priceMax < d.k_high:
+                    priceMax = d.k_high
+                if priceMin > d.k_low or priceMin == 0:
+                    priceMin = d.k_low
         else:
             data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==p).order_by(TxContractDealKdata1Min.timestamp.desc()).limit(1).first()
             if data is None:
@@ -288,9 +295,20 @@ def hx_fdxqs_exchange_pair_summary():
             else:
                 priceLastDay = data.k_close
                 priceNow = data.k_close
+                priceMax = data.k_high
+                priceMin = data.k_low
             volume = 0
             percent = 0
-        summary.append({'pair': p, 'priceNow': priceNow, 'priceLastDay': priceLastDay, 'volume': volume, 'percent': percent})
+        
+        summary.append({
+            'pair': p, 
+            'priceNow': priceNow, 
+            'priceLastDay': priceLastDay, 
+            'priceMax': priceMax, 
+            'priceMin': priceMin, 
+            'volume': volume, 
+            'percent': percent
+        })
     return summary
 
 
