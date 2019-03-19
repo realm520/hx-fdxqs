@@ -234,7 +234,7 @@ class ContractHistory():
                                     self.update_balance(maker_tx.address, assets[0], -1*int(items[6]), 1)
                                     self.update_balance(maker_tx.address, assets[1], int(items[7]), 0)
                             #FIXME, the deal history may be duplicated.
-                            if txid != match_tx_id:
+                            if txid != items[3]:
                                 self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], block_num=int(block['number']), \
                                     timestamp=block['timestamp']))
