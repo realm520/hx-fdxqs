@@ -61,6 +61,12 @@ def options_api():
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
+@jsonrpc.method('hx.fdxqs.exchange.currency.query(currency=int)', validate=True)
+def hx_fdxqs_exchange_currency_query(currency):
+    data = ServiceConfig.query.filter_by(key='currency').first()
+    return {'data': [{'id': t.id, 'title': t.title, 'level': t.level, 'category': t.category} for t in data]}
+
+
 @jsonrpc.method('hx.fdxqs.exchange.announcement.list.query()', validate=True)
 def hx_fdxqs_exchange_announcement_list_query():
     data = Announcements.query.order_by(Announcements.timestamp.desc()).all()
@@ -409,7 +415,7 @@ def update_kline(times):
 @click.option('--times', default=1, type=int, help='scan times')
 @click.option('--kline', default=0, type=int, help='update kline data')
 @click.option('--currency', default=0, type=int, help='update coin price by QC')
-def scan_block(times, kline):
+def scan_block(times, kline, currency):
     ch = ContractHistory(app.config, db)
     total = 0
     import time
@@ -421,9 +427,9 @@ def scan_block(times, kline):
             update_kline_real(1)
             logging.info("Update kline data finished")
         if currency == 1:
-            import app.Market
-            market = app.Market(app.config)
-            price = market.getLastPrice('pax', 1)
+            from app.market import Market
+            m = Market(app.config)
+            price = m.getLastPrice('pax', 1)
             ServiceConfig.query.filter_by(key='currency').delete()
             db.session.add(ServiceConfig(key='currency', value=price))
     logging.info("Scan block finished")
