@@ -408,6 +408,7 @@ def update_kline(times):
 @app.cli.command('scan_block')
 @click.option('--times', default=1, type=int, help='scan times')
 @click.option('--kline', default=0, type=int, help='update kline data')
+@click.option('--currency', default=0, type=int, help='update coin price by QC')
 def scan_block(times, kline):
     ch = ContractHistory(app.config, db)
     total = 0
@@ -419,6 +420,12 @@ def scan_block(times, kline):
         if kline == 1:
             update_kline_real(1)
             logging.info("Update kline data finished")
+        if currency == 1:
+            import app.Market
+            market = app.Market(app.config)
+            price = market.getLastPrice('pax', 1)
+            ServiceConfig.query.filter_by(key='currency').delete()
+            db.session.add(ServiceConfig(key='currency', value=price))
     logging.info("Scan block finished")
 
 
