@@ -61,10 +61,11 @@ def options_api():
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
-@jsonrpc.method('hx.fdxqs.exchange.currency.query(currency=int)', validate=True)
-def hx_fdxqs_exchange_currency_query(currency):
+# currency: 1 - QC, 2 - PAX
+@jsonrpc.method('hx.fdxqs.exchange.currency.query(coin=str, currency=int)', validate=True)
+def hx_fdxqs_exchange_currency_query(coin, currency):
     data = ServiceConfig.query.filter_by(key='currency').first()
-    return {'data': [{'id': t.id, 'title': t.title, 'level': t.level, 'category': t.category} for t in data]}
+    return { 'data': data.value }
 
 
 @jsonrpc.method('hx.fdxqs.exchange.announcement.list.query()', validate=True)
@@ -367,13 +368,13 @@ def update_kline_real(times):
             last_time = datetime.datetime.utcnow() - datetime.timedelta(days=365)
         else:
             last_time = k_last.timestamp
-        # logging.info("last time: %s" % (last_time))
+        logging.info("last time: %s" % (last_time))
         ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>=last_time).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
-        if k_last is not None:
-            target_table.query.filter_by(timestamp=k_last.timestamp).delete()
         for r in k.get_k_data():
+            if k_last is not None and k_last.timistamp == r['start_time']:
+                target_table.query.filter_by(timestamp=k_last.timestamp).delete()
             db.session.add(target_table(ex_pair=pair, k_open=r['k_open'], k_close=r['k_close'], \
                     k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
                     block_num=r['block_num'], base_amount=r['base_amount'], quote_amount=r['quote_amount']))
