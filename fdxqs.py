@@ -324,9 +324,17 @@ def make_shell_context():
     return dict(app=app, db=db)
 
 
+@app.cli.command('clear_kline')
+def cleardb():
+    for t in kline_table_list:
+        t.query.delete()
+    db.session.commit()
+    print("clear kline finished")
+
+
 @app.cli.command('cleardb')
 @click.option('--block', default=0, type=int, help='block number from which to clear')
-def cleardb(block):
+def cleardb(block, kline):
     #TODO, process order tables rollback.
     table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
             AccountInfo, UserBalance]
