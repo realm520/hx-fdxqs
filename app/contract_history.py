@@ -133,8 +133,8 @@ class ContractHistory():
 
 
     # update_type:
-    # 0 - only update balance (deposit, withdraw or make deal)
-    # 1 - only update frozen (make deal)
+    # 0 - only update balance (deposit, withdraw or make buy deal)
+    # 1 - only update frozen (make sell deal)
     # 2 - update both (make or cancel order)
     def update_balance(self, address, asset, amount, update_type):
         base = UserBalance.query.filter_by(address=address,asset_symbol=asset).first()
@@ -145,6 +145,8 @@ class ContractHistory():
             else:
                 self.db.session.add(UserBalance(asset_symbol=asset, address=address, balance=amount, frozen=0))
         else:
+            if address == 'HXNXBuLgePDYmWeQELGArK4XqbdbdkgjEY97' and asset == 'HX':
+                logging.info('Balance: %d, Frozen: %d, amount: %d, type: %d' % (base.balance, base.frozen, amount, update_type))
             if update_type == 0 or update_type == 2:
                 base.balance += amount
             if update_type == 1 or update_type == 2:
@@ -229,9 +231,9 @@ class ContractHistory():
                                 assets = maker_tx.ex_pair.split('/')
                                 if maker_tx.ex_type == 'buy':
                                     self.update_balance(maker_tx.address, assets[0], int(items[6]), 0)
-                                    self.update_balance(maker_tx.address, assets[1], -1*int(items[7]), 1)
+                                    self.update_balance(maker_tx.address, assets[1], int(items[7]), 1)
                                 elif maker_tx.ex_type == 'sell':
-                                    self.update_balance(maker_tx.address, assets[0], -1*int(items[6]), 1)
+                                    self.update_balance(maker_tx.address, assets[0], int(items[6]), 1)
                                     self.update_balance(maker_tx.address, assets[1], int(items[7]), 0)
                             #FIXME, the deal history may be duplicated.
                             if txid != items[3]:
