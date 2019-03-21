@@ -381,7 +381,7 @@ def update_kline_real(times):
         for t in ticks:
             k.process_tick(t)
         for r in k.get_k_data():
-            if k_last is not None and k_last.timistamp == r['start_time']:
+            if k_last is not None and k_last.timestamp == r['start_time']:
                 target_table.query.filter_by(timestamp=k_last.timestamp).delete()
             db.session.add(target_table(ex_pair=pair, k_open=r['k_open'], k_close=r['k_close'], \
                     k_high=r['k_high'], k_low=r['k_low'], timestamp=r['start_time'], \
