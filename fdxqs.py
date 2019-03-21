@@ -136,7 +136,7 @@ def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10
 
 @jsonrpc.method('hx.fdxqs.exchange.market.query(pair=str, depth=int)', validate=True)
 def hx_fdxqs_exchange_market_query(pair, depth=5):
-    merge_precisions = {'HC/HX': 4, 'HC/PAX': 4, 'HX/PAX': 4, 'BTC/PAX': 4, 'LTC/PAX': 4, 'ETH/PAX': 4}
+    merge_precisions = {'HC/HX': 4, 'HC/ERCPAX': 4, 'HX/ERCPAX': 4, 'BTC/ERCPAX': 4, 'LTC/ERCPAX': 4, 'ETH/ERCPAX': 4}
     logging.info("[hx.fdxqs.exchange.market.query] - pair: %s, depth: %d" % (pair, depth))
     data = ContractExchangeOrder.query.filter(ContractExchangeOrder.ex_pair==pair, or_(ContractExchangeOrder.stat==1, ContractExchangeOrder.stat==2)).\
             order_by(ContractExchangeOrder.timestamp.desc()).all()
