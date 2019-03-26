@@ -183,6 +183,9 @@ class ContractHistory():
             UserBalance.query.filter_by(address=a['addr'], asset_symbol=a['coin']).delete()
             if 'locked' not in balance:
                 balance['locked'] = 0
+            if 'available' not in balance:
+                balance['available'] = 0
+                logging.error('no balance for: %s, %s' % (a['addr'], a['coin']))
             logging.info('address: %s, coin: %s, balance: %d, frozen: %d' % (a['addr'], a['coin'], int(balance['available']), balance['locked']))
             self.db.session.add(UserBalance(asset_symbol=a['coin'], \
                     address=a['addr'], balance=int(balance['available']), frozen=int(balance['locked'])))
