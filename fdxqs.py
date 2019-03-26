@@ -62,10 +62,23 @@ jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
 # currency: 1 - QC, 2 - PAX
-@jsonrpc.method('hx.fdxqs.exchange.currency.query(coin=str, currency=int)', validate=True)
-def hx_fdxqs_exchange_currency_query(coin, currency):
-    data = ServiceConfig.query.filter_by(key='currency').first()
-    return { 'data': data.value }
+@jsonrpc.method('hx.fdxqs.exchange.currency.query(pair=str)', validate=True)
+def hx_fdxqs_exchange_currency_query(pair):
+    pax = ServiceConfig.query.filter_by(key='currency').first().value
+    quote = pair.split('/')[1]
+    if quote != 'ERCPAX':
+        data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==quote+'/ERCPAX').\
+                order_by(TxContractDealKdata1Min.timestamp.desc()).limit(1).first()
+        if data is None:
+            return { 'currency': 0 }
+        else:
+            quote_price = data.k_close * pax
+    data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==pair).\
+            order_by(TxContractDealKdata1Min.timestamp.desc()).limit(1).first()
+    if data is None:
+        return { 'currency': 0 }
+    else:
+        return { 'currency': data.k_close * quote_price }
 
 
 @jsonrpc.method('hx.fdxqs.exchange.announcement.list.query()', validate=True)
@@ -325,7 +338,7 @@ def make_shell_context():
 
 
 @app.cli.command('clear_kline')
-def cleardb():
+def clear_kline():
     for t in kline_table_list:
         t.query.delete()
     db.session.commit()
@@ -334,7 +347,7 @@ def cleardb():
 
 @app.cli.command('cleardb')
 @click.option('--block', default=0, type=int, help='block number from which to clear')
-def cleardb(block, kline):
+def cleardb(block):
     #TODO, process order tables rollback.
     table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
             AccountInfo, UserBalance]
