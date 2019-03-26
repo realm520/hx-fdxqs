@@ -36,9 +36,11 @@ class ContractHistory():
         self.db = db
         self.contract_exchange_id = config['CONTRACT_EXCHANGE_ID']
         self.contract_caller = config['CONTRACT_CALLER']
+        self.ex_pairs = config['CONTRACT_EXCHANGE_PAIRS']
         self.block_cache_size = 360
         self.block_cache_limit = 720
         self.load_block_cache()
+        self.balance_changed_cache = []
 
 
     def load_block_cache(self):
@@ -139,19 +141,52 @@ class ContractHistory():
     def update_balance(self, address, asset, amount, update_type):
         base = UserBalance.query.filter_by(address=address,asset_symbol=asset).first()
         if base is None:
-            logging.warn("Fail to get base asset balance: %s, %s" % (address, asset))
+            logging.info("Fail to get base asset balance: %s, %s" % (address, asset))
             if amount < 0:
                 logging.warn("Cannot reduce balance for zero: %d" % (amount))
             else:
                 self.db.session.add(UserBalance(asset_symbol=asset, address=address, balance=amount, frozen=0))
         else:
-            if address == 'HXNXBuLgePDYmWeQELGArK4XqbdbdkgjEY97' and asset == 'HX':
-                logging.info('Balance: %d, Frozen: %d, amount: %d, type: %d' % (base.balance, base.frozen, amount, update_type))
             if update_type == 0 or update_type == 2:
                 base.balance += amount
             if update_type == 1 or update_type == 2:
                 base.frozen -= amount
             self.db.session.add(base)
+            logging.debug('Balance: %d, Frozen: %d, amount: %d, type: %d' % (base.balance, base.frozen, amount, update_type))
+
+    def update_balance_offline(self):
+        frozen_cache = {}
+        for a in self.balance_changed_cache:
+            '''if a['addr'] not in frozen_cache:
+                frozen_cache[a['addr']] = {}
+                for pair in self.ex_pairs:
+                    coins = pair.split('/')
+                    frozen = self.http_request('invoke_contract_offline', \
+                        [\
+                            self.contract_caller, \
+                            self.contract_exchange_id[0], \
+                            "getLockBalanceOfPair", \
+                            "%s,%s,%s" % (coins[0], coins[1], a['addr'])])
+                    if coins[0] not in frozen:
+                        continue
+                    if coins[0] in frozen_cache[a['addr']]:
+                        frozen_cache[a['addr']][coins[0]] += int(frozen[coins[0]])
+                    else:
+                        frozen_cache[a['addr']][coins[0]] = int(frozen[coins[0]])
+                    if coins[1] in frozen_cache[a['addr']]:
+                        frozen_cache[a['addr']][coins[1]] += int(frozen[coins[1]])
+                    else:
+                        frozen_cache[a['addr']][coins[1]] = int(frozen[coins[1]])'''
+            balanceStr = self.http_request('invoke_contract_offline', \
+                [self.contract_caller, self.contract_exchange_id[0], "getUserBalance", "%s,%s" % (a['addr'], a['coin'])])
+            balance = json.loads(balanceStr)
+            UserBalance.query.filter_by(address=a['addr'], asset_symbol=a['coin']).delete()
+            if 'locked' not in balance:
+                balance['locked'] = 0
+            logging.info('address: %s, coin: %s, balance: %d, frozen: %d' % (a['addr'], a['coin'], int(balance['available']), balance['locked']))
+            self.db.session.add(UserBalance(asset_symbol=a['coin'], \
+                    address=a['addr'], balance=int(balance['available']), frozen=int(balance['locked'])))
+            self.balance_changed_cache = []
 
 
     def get_contract_invoke_object(self, op, txid, block):
@@ -190,7 +225,8 @@ class ContractHistory():
                         self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['from_address'], \
                                 timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
                                 asset_type='deposit', asset_symbol=order['symbol'], fee=0))
-                        self.update_balance(order['from_address'], order['symbol'], int(order['amount']), 0)
+                        # self.update_balance(order['from_address'], order['symbol'], int(order['amount']), 0)
+                        self.balance_changed_cache.append({'addr': order['from_address'], 'coin': order['symbol']})
             elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
                 contract_info = ContractInfo.query.filter_by(contract_id=op[1]['contract_id']).first()
                 if contract_info is None:
@@ -202,7 +238,8 @@ class ContractHistory():
                         self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['to_address'], \
                                 timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
                                 asset_type='withdraw', asset_symbol=order['symbol'], fee=order['fee']))
-                        self.update_balance(order['to_address'], order['symbol'], -1*int(order['amount']), 0)
+                        # self.update_balance(order['to_address'], order['symbol'], -1*int(order['amount']), 0)
+                        self.balance_changed_cache.append({'addr': order['to_address'], 'coin': order['symbol']})
                     elif contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
                         order = json.loads(e['event_arg'])
                         items = order['putOnOrder'].split(',')
@@ -213,10 +250,12 @@ class ContractHistory():
                         assets = order['exchangPair'].split('/')
                         if e['event_name'] == 'BuyOrderPutedOn':
                             logging.debug("[%s] BuyOrderPutedOn: %d - %d" % (order['exchangPair'], int(items[0]), int(items[1])))
-                            self.update_balance(items[2], assets[1], -1*int(items[1]), 2)
+                            # self.update_balance(items[2], assets[1], -1*int(items[1]), 2)
+                            self.balance_changed_cache.append({'addr': items[2], 'coin': assets[1]})
                         elif e['event_name'] == 'SellOrderPutedOn':
                             logging.debug("[%s] SellOrderPutedOn: %d - %d" % (order['exchangPair'], int(items[0]), int(items[1])))
-                            self.update_balance(items[2], assets[0], -1*int(items[0]), 2)
+                            # self.update_balance(items[2], assets[0], -1*int(items[0]), 2)
+                            self.balance_changed_cache.append({'addr': items[2], 'coin': assets[0]})
                         for deal in order['transactionBuys']+order['transactionSells']:
                             items = deal.split(',')
                             maker_tx = ContractExchangeOrder.query.filter_by(tx_id=items[3]).first()
@@ -231,21 +270,19 @@ class ContractHistory():
                                     maker_tx.stat = 2
                                 self.db.session.add(maker_tx)
                                 assets = maker_tx.ex_pair.split('/')
-                                logging.info("[%s] deal(%s): %d - %d" % (maker_tx.ex_pair, maker_tx.ex_type, int(items[6]), int(items[7])))
-                                if maker_tx.ex_type == 'buy':
+                                logging.debug("[%s] deal(%s): %d - %d" % (maker_tx.ex_pair, maker_tx.ex_type, int(items[6]), int(items[7])))
+                                '''if maker_tx.ex_type == 'buy':
                                     self.update_balance(maker_tx.address, assets[0], int(items[6]), 0)
                                     self.update_balance(maker_tx.address, assets[1], int(items[7]), 1)
-                                    if maker_tx.stat == 3:
-                                        if int(items[0]) < 0:
-                                            self.update_balance(maker_tx.address, assets[0], -1*int(items[0]), 0)
+                                    if maker_tx.stat == 3 and int(items[1]) > 0:
                                         self.update_balance(maker_tx.address, assets[1], int(items[1]), 2)
                                 elif maker_tx.ex_type == 'sell':
                                     self.update_balance(maker_tx.address, assets[0], int(items[6]), 1)
                                     self.update_balance(maker_tx.address, assets[1], int(items[7]), 0)
-                                    if maker_tx.stat == 3:
-                                        self.update_balance(maker_tx.address, assets[0], int(items[0]), 2)
-                                        if int(items[1]) < 0:
-                                            self.update_balance(maker_tx.address, assets[1], -1*int(items[1]), 0)
+                                    if maker_tx.stat == 3 and int(items[0]) > 0:
+                                        self.update_balance(maker_tx.address, assets[0], int(items[0]), 2)'''
+                                self.balance_changed_cache.append({'addr': maker_tx.address, 'coin': assets[0]})
+                                self.balance_changed_cache.append({'addr': maker_tx.address, 'coin': assets[1]})
                             if txid != items[3]:
                                 self.db.session.add(TxContractDealHistory(address=items[2], tx_id=txid, match_tx_id=items[3], base_amount=int(items[6]), \
                                     quote_amount=int(items[7]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], block_num=int(block['number']), \
@@ -263,10 +300,12 @@ class ContractHistory():
                             maker_tx.stat = 4
                             self.db.session.add(maker_tx)
                             assets = maker_tx.ex_pair.split('/')
-                            if maker_tx.ex_type == 'buy':
+                            '''if maker_tx.ex_type == 'buy':
                                 self.update_balance(maker_tx.address, assets[1], maker_tx.current_quote_amount, 2)
                             elif maker_tx.ex_type == 'sell':
-                                self.update_balance(maker_tx.address, assets[0], maker_tx.current_base_amount, 2)
+                                self.update_balance(maker_tx.address, assets[0], maker_tx.current_base_amount, 2)'''
+                            self.balance_changed_cache.append({'addr': maker_tx.address, 'coin': assets[0]})
+                            self.balance_changed_cache.append({'addr': maker_tx.address, 'coin': assets[1]})
                     elif contract_type == 'exchange' and (e['event_name'] == 'exchangePairOn'):
                         order = json.loads(e['event_arg'])
                         self.db.session.add(ContractExchangePair(contract_id=order['contractAddress'], tx_id=txid, \
@@ -392,6 +431,7 @@ class ContractHistory():
                 self.exchange_person_orders(lastBlockNumBeforeCommit)
                 ServiceConfig.query.filter_by(key='scan_block').delete()
                 self.db.session.add(ServiceConfig(key='scan_block', value=str(i)))
+                self.update_balance_offline()
                 self.db.session.commit()
                 lastBlockNumBeforeCommit = i
         ServiceConfig.query.filter_by(key='scan_block').delete()

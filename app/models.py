@@ -181,7 +181,7 @@ class UserBalance(db.Model):
     __tablename__ = 'user_balance'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     asset_symbol = db.Column(db.String(64))
-    address = db.Column(db.String(64))
+    address = db.Column(db.String(64), index=True)
     contract_id = db.Column(db.String(64), index=True)
     balance = db.Column(db.BigInteger)
     frozen = db.Column(db.BigInteger)
