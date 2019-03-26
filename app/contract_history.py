@@ -156,6 +156,7 @@ class ContractHistory():
 
     def update_balance_offline(self):
         frozen_cache = {}
+        self.balance_changed_cache = list(set(self.balance_changed_cache))
         for a in self.balance_changed_cache:
             '''if a['addr'] not in frozen_cache:
                 frozen_cache[a['addr']] = {}
