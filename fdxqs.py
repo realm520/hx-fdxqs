@@ -73,6 +73,8 @@ def hx_fdxqs_exchange_currency_query(pair):
             return { 'currency': 0 }
         else:
             quote_price = data.k_close * pax
+    else:
+        quote_price = pax
     data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==pair).\
             order_by(TxContractDealKdata1Min.timestamp.desc()).limit(1).first()
     if data is None:
