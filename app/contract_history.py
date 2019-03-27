@@ -458,9 +458,9 @@ class ContractHistory():
                 self.exchange_person_orders(lastBlockNumBeforeCommit)
                 ServiceConfig.query.filter_by(key='scan_block').delete()
                 self.db.session.add(ServiceConfig(key='scan_block', value=str(i)))
-                self.update_balance_offline()
                 self.db.session.commit()
                 lastBlockNumBeforeCommit = i
+        self.update_balance_offline()
         ServiceConfig.query.filter_by(key='scan_block').delete()
         self.db.session.add(ServiceConfig(key='scan_block', value=str(maxBlockNum-1)))
         self.db.session.commit()
