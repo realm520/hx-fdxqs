@@ -392,7 +392,7 @@ class ContractHistory():
                         if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER or op[0] == ContractHistory.OP_TYPE_CONTRACT_UPGRADE \
                                 or op[0] == 78 or op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE or op[0] == 80 \
                                 or op[0] == ContractHistory.OP_TYPE_CONTRACT_TRANSFER:
-                            if op[1].has_key('contract_code'):
+                            if 'contract_code' in op[1]:
                                 op[1]['contract_code']['code'] = None
                             self.db.session.add(TxContractRawHistory(block_num=i, tx_id=block['transaction_ids'][tx_count], \
                                     op_seq=op_count, op_type=op[0], tx_json=json.dumps(op[1])))
