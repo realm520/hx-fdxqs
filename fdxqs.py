@@ -64,7 +64,7 @@ jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 # currency: 1 - QC, 2 - PAX
 @jsonrpc.method('hx.fdxqs.exchange.currency.query(pair=str)', validate=True)
 def hx_fdxqs_exchange_currency_query(pair):
-    pax = ServiceConfig.query.filter_by(key='currency').first().value
+    pax = float(ServiceConfig.query.filter_by(key='currency').first().value)
     quote = pair.split('/')[1]
     if quote != 'ERCPAX':
         data = TxContractDealKdata1Min.query.filter(TxContractDealKdata1Min.ex_pair==quote+'/ERCPAX').\
@@ -391,7 +391,7 @@ def update_kline_real(times):
             last_time = datetime.datetime.utcnow() - datetime.timedelta(days=365)
         else:
             last_time = k_last.timestamp
-        logging.info("last time: %s" % (last_time))
+        logging.debug("last time: %s" % (last_time))
         ticks = base_table.query.filter(base_table.ex_pair==pair, base_table.timestamp>=last_time).order_by(base_table.id).all()
         for t in ticks:
             k.process_tick(t)
