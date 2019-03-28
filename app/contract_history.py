@@ -84,8 +84,12 @@ class ContractHistory():
         TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
-        for t in kline_table_list:
-            t.query.filter(t.block_num>=block_num).delete()
+        last_block = BlockRawHistory.query.order_by(BlockRawHistory.block_num.desc()).first()
+        if last_block is None:
+            return
+        else:
+            for t in kline_table_list:
+                t.query.filter(t.timestamp>last_block.timestamp).delete()
 
 
     #TODO, fork process
