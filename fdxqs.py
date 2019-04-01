@@ -166,7 +166,7 @@ def hx_fdxqs_exchange_market_query(pair, depth=5):
             quote_precision = 100000
         else:
             quote_precision = 100000000
-        price = round(float(d.current_base_amount) / float(d.current_quote_amount) / base_precision * quote_precision, 4)
+        price = round(float(d.current_quote_amount) / float(d.current_base_amount) / quote_precision * base_precision, 4)
         market = result[d.ex_type]
         if market.get(price) is None:
             market[price] = float(d.current_base_amount) / base_precision
@@ -252,7 +252,7 @@ def hx_fdxqs_kline_query(pair, type, count=100):
             order_by(kline_table_list[type].timestamp).all()
     if len(data) == 0:
         data = table.query.filter(table.ex_pair==pair).\
-            order_by(kline_table_list[type].block_num.desc()).limit(1).all()
+            order_by(kline_table_list[type].timestamp.desc()).limit(1).all()
         if len(data) == 1:
             data[0].base_amount = 0
             data[0].quote_amount = 0
