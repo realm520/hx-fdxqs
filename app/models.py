@@ -207,7 +207,7 @@ class ContractExchangeOrder(db.Model):
     origin_quote_amount = db.Column(db.BigInteger)
     current_base_amount = db.Column(db.BigInteger)
     current_quote_amount = db.Column(db.BigInteger)
-    tx_id = db.Column(db.String(64), index=True)
+    tx_id = db.Column(db.String(64), unique=True, index=True)
     stat = db.Column(db.Integer)
     block_num = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime)

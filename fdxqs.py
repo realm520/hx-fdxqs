@@ -42,6 +42,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
 log.addHandler(log_file_handler)
 logging.getLogger("requests").setLevel(logging.WARNING)
+#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
 # @app.route('/user/<name>')
@@ -151,7 +152,6 @@ def hx_fdxqs_exchange_deposit_withdraw_query(addr, symbol, page=1, page_count=10
 
 @jsonrpc.method('hx.fdxqs.exchange.market.query(pair=str, depth=int)', validate=True)
 def hx_fdxqs_exchange_market_query(pair, depth=5):
-    merge_precisions = {'HC/HX': 4, 'HC/ERCPAX': 4, 'HX/ERCPAX': 4, 'BTC/ERCPAX': 4, 'LTC/ERCPAX': 4, 'ETH/ERCPAX': 4, 'ERCPAX/HX': 4}
     logging.info("[hx.fdxqs.exchange.market.query] - pair: %s, depth: %d" % (pair, depth))
     data = ContractExchangeOrder.query.filter(ContractExchangeOrder.ex_pair==pair, or_(ContractExchangeOrder.stat==1, ContractExchangeOrder.stat==2)).\
             order_by(ContractExchangeOrder.timestamp.desc()).all()
@@ -166,7 +166,7 @@ def hx_fdxqs_exchange_market_query(pair, depth=5):
             quote_precision = 100000
         else:
             quote_precision = 100000000
-        price = round(float(d.current_quote_amount) / float(d.current_base_amount) / quote_precision * base_precision, merge_precisions[d.ex_pair])
+        price = round(float(d.current_base_amount) / float(d.current_quote_amount) / base_precision * quote_precision, 4)
         market = result[d.ex_type]
         if market.get(price) is None:
             market[price] = float(d.current_base_amount) / base_precision
@@ -179,7 +179,7 @@ def hx_fdxqs_exchange_market_query(pair, depth=5):
         else:
             size = len(market_data)
         if order_type == 'buy':
-            result[order_type] = [(k,market_data[k]) for k in sorted(market_data.keys())][:size]
+            result[order_type] = [(k,market_data[k]) for k in sorted(market_data.keys())][::-1][:size]
         else:
             result[order_type] = [(k,market_data[k]) for k in sorted(market_data.keys())][len(market_data)-size:]
 
