@@ -84,9 +84,9 @@ def hx_fdxqs_exchange_currency_query(pair):
         return { 'currency': data.k_close * quote_price }
 
 
-@jsonrpc.method('hx.fdxqs.exchange.announcement.list.query()', validate=True)
-def hx_fdxqs_exchange_announcement_list_query():
-    data = Announcements.query.order_by(Announcements.timestamp.desc()).all()
+@jsonrpc.method('hx.fdxqs.exchange.announcement.list.query(lang=str)', validate=True)
+def hx_fdxqs_exchange_announcement_list_query(lang):
+    data = Announcements.query.filter_by(language=lang).order_by(Announcements.timestamp.desc()).all()
     return {'data': [{'id': t.id, 'title': t.title, 'level': t.level, 'category': t.category} for t in data]}
 
 
@@ -258,9 +258,6 @@ def hx_fdxqs_kline_query(pair, type, count=100):
             data[0].quote_amount = 0
     else:
         missing_position = len(data)
-    logging.info("missing_position: %d" % missing_position)
-    logging.info("timestamp: %s" % data[0].timestamp)
-    logging.info("len(data): %d" % len(data))
     if data is None or len(data) == 0:
         return {'data': []}
     last_item = copy.deepcopy(data[len(data)-1])

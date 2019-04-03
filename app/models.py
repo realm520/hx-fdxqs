@@ -6,6 +6,7 @@ class Announcements(db.Model):
     __tablename__ = 'announcement'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(256), index=True)
+    lang = db.Column(db.String(8))
     level = db.Column(db.Integer)
     category = db.Column(db.Integer)
     content = db.Column(db.Text, default=False)
