@@ -244,7 +244,7 @@ def hx_fdxqs_kline_query(pair, type, count=100):
         }
     cycles = [60, 300, 900, 1800, 3600, 7200, 21600, 43200, 86400, 604800, 2592000]
     now = datetime.datetime.utcnow()
-    start = now - datetime.timedelta(seconds=(count+1)*cycles[type])
+    start = now - datetime.timedelta(seconds=(count*cycles[type]+1))
     table = kline_table_list[type]
     logging.debug(start.strftime("%Y-%m-%d %H:%M:%S"))
     missing_position = 0
