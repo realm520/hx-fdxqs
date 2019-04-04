@@ -86,7 +86,7 @@ def hx_fdxqs_exchange_currency_query(pair):
 
 @jsonrpc.method('hx.fdxqs.exchange.announcement.list.query(lang=str)', validate=True)
 def hx_fdxqs_exchange_announcement_list_query(lang):
-    data = Announcements.query.filter_by(language=lang).order_by(Announcements.timestamp.desc()).all()
+    data = Announcements.query.filter_by(lang=lang).order_by(Announcements.timestamp.desc()).all()
     return {'data': [{'id': t.id, 'title': t.title, 'level': t.level, 'category': t.category} for t in data]}
 
 
