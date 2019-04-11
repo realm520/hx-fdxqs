@@ -63,8 +63,8 @@ jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
 
 # currency: 1 - QC, 2 - PAX
-@jsonrpc.method('hx.fdxqs.exchange.currency.query(pair=str)', validate=True)
-def hx_fdxqs_exchange_currency_query(pair):
+@jsonrpc.method('hx.fdxqs.exchange.currency.query(pair=str, currency=int)', validate=True)
+def hx_fdxqs_exchange_currency_query(pair, currency=1):
     pax = float(ServiceConfig.query.filter_by(key='currency').first().value)
     quote = pair.split('/')[1]
     if quote != 'ERCPAX':
@@ -81,7 +81,10 @@ def hx_fdxqs_exchange_currency_query(pair):
     if data is None:
         return { 'currency': 0 }
     else:
-        return { 'currency': data.k_close * quote_price }
+        if currency == 1:
+            return { 'currency': data.k_close * quote_price }
+        else:
+            return { 'currency': data.k_close * quote_price / pax }
 
 
 @jsonrpc.method('hx.fdxqs.exchange.announcement.list.query(lang=str)', validate=True)
