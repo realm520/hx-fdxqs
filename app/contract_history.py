@@ -9,7 +9,7 @@ from app.models import TxContractRawHistory, ContractInfo, \
         ServiceConfig, BlockRawHistory, TxContractEventHistory, ContractPersonExchangeEvent, \
         ContractPersonExchangeOrder, AccountInfo, CrossChainAssetInOut, TxContractDealTick, \
         kline_table_list, ContractExchangeOrder, TxContractDepositWithdraw, ContractExchangePair, \
-        TxContractDealHistory, UserBalance
+        TxContractDealHistory, UserBalance, HRC12Coins
 from sqlalchemy import func
 
 
@@ -39,11 +39,11 @@ class ContractHistory():
         self.ex_pairs = config['CONTRACT_EXCHANGE_PAIRS']
         self.block_cache_size = 360
         self.block_cache_limit = 720
-        self.load_block_cache()
+        self.load_cache()
         self.balance_changed_cache = []
 
 
-    def load_block_cache(self):
+    def load_cache(self):
         cache_records = BlockRawHistory.query.order_by(BlockRawHistory.block_num.desc()).limit(self.block_cache_size).all()
         self.block_cache = []
         for record in cache_records:
@@ -51,6 +51,24 @@ class ContractHistory():
         logging.info('Load %d records to block_cache.' % len(cache_records))
         if len(self.block_cache) > 0:
             logging.info('Latest block height: %d .' % self.block_cache[0]['number'])
+        # load HRC12 coin symbols
+        coins = HRC12Coins.query.all()
+        for c in coins:
+            self.hrc12_coins[c.address] = c.symbol
+
+
+    def hrc12Addr2Symbol(self, address, block_num):
+        if address.find('HXC') != 0:
+            return address
+        else:
+            if address in self.hrc12_coins:
+                return self.hrc12_coins[address]
+            else:
+                symbol = self.http_request("invoke_contract_offline",
+                        [self.contract_caller, address, "tokenSymbol", ""])
+                self.hrc12_coins[address] = symbol
+                self.db.session.add(HRC12Coins(symbol=symbol, address=address, block_num=block_num))
+                return symbol
 
 
     def http_request(self, method, args):
@@ -231,12 +249,12 @@ class ContractHistory():
                         order = json.loads(e['event_arg'])
                         self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['from_address'], \
                                 timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
-                                asset_type='deposit', asset_symbol=order['symbol'], fee=0))
+                                asset_type='deposit', asset_symbol=self.hrc12Addr2Symbol(order['symbol'], block['number']), fee=0))
                         # self.update_balance(order['from_address'], order['symbol'], int(order['amount']), 0)
                         try:
-                            self.balance_changed_cache.index({'addr': order['from_address'], 'coin': order['symbol']})
+                            self.balance_changed_cache.index({'addr': order['from_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
                         except:
-                            self.balance_changed_cache.append({'addr': order['from_address'], 'coin': order['symbol']})
+                            self.balance_changed_cache.append({'addr': order['from_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
             elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
                 contract_info = ContractInfo.query.filter_by(contract_id=op[1]['contract_id']).first()
                 if contract_info is None:
@@ -247,12 +265,12 @@ class ContractHistory():
                         order = json.loads(e['event_arg'])
                         self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['to_address'], \
                                 timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
-                                asset_type='withdraw', asset_symbol=order['symbol'], fee=order['fee']))
+                                asset_type='withdraw', asset_symbol=self.hrc12Addr2Symbol(order['symbol'],block['number']), fee=order['fee']))
                         # self.update_balance(order['to_address'], order['symbol'], -1*int(order['amount']), 0)
                         try:
-                            self.balance_changed_cache.index({'addr': order['to_address'], 'coin': order['symbol']})
+                            self.balance_changed_cache.index({'addr': order['to_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
                         except:
-                            self.balance_changed_cache.append({'addr': order['to_address'], 'coin': order['symbol']})
+                            self.balance_changed_cache.append({'addr': order['to_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
                     elif contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
                         order = json.loads(e['event_arg'])
                         items = order['putOnOrder'].split(',')

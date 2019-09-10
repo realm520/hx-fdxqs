@@ -19,6 +19,21 @@ class Announcements(db.Model):
         return '<Announcements %r>' % self.id
 
 
+class HRC12Coins(db.Model):
+    __tablename__ = 'hrc12_coins'
+    id = db.Column(db.Integer, primary_key=True)
+    symbol = db.Column(db.String(64), index=True)
+    address = db.Column(db.String(128), unique=True, index=True)
+    desc = db.Column(db.Text, default=False)
+    block_num = db.Column(db.Integer)
+
+    def __init__(self, **kwargs):
+        super(HRC12Coins, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<HRC12Coins %r>' % self.id
+
+
 class ServiceConfig(db.Model):
     __tablename__ = 'service_config'
     id = db.Column(db.Integer, primary_key=True)
