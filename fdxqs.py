@@ -352,7 +352,7 @@ def clear_kline():
 def cleardb(block):
     #TODO, process order tables rollback.
     table_to_clear = [TxContractRawHistory, BlockRawHistory, TxContractEventHistory, ContractInfo, \
-            AccountInfo, UserBalance]
+            AccountInfo, ContractExchangeOrder, ContractExchangePair]
     # ContractPersonExchangeOrder, 
     table_to_clear += kline_table_list
     for t in table_to_clear:
