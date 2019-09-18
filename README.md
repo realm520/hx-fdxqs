@@ -14,6 +14,10 @@ pip install -r requirements.txt
   flask db migrate
   flask db upgrade
   ```
+* Start scan service
+  ```
+  flask scan_block --times=0 --kline=1
+  ```
 * Start debug service
   ```
   flask run
