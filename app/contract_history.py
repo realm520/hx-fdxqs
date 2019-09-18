@@ -52,12 +52,21 @@ class ContractHistory():
         if len(self.block_cache) > 0:
             logging.info('Latest block height: %d .' % self.block_cache[0]['number'])
         # load HRC12 coin symbols
+        self.hrc12_coins = {}
         coins = HRC12Coins.query.all()
         for c in coins:
             self.hrc12_coins[c.address] = c.symbol
 
+    def hrc12Symbol2Addr(self, symbol):
+        logging.debug('hrc12Symbol2Addr: %s' % symbol)
+        coin = HRC12Coins.query.filter_by(symbol=symbol).first()
+        if coin is not None:
+            return coin.address
+        else:
+            return symbol
 
     def hrc12Addr2Symbol(self, address, block_num):
+        logging.debug('hrc12Addr2Symbol: %s' % address)
         if address.find('HXC') != 0:
             return address
         else:
@@ -102,6 +111,7 @@ class ContractHistory():
         TxContractDealHistory.query.filter(TxContractDealHistory.block_num>=block_num).delete()
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
+        ContractExchangeOrder.query.filter(ContractExchangeOrder.block_num>=block_num).delete()
         last_block = BlockRawHistory.query.order_by(BlockRawHistory.block_num.desc()).first()
         if last_block is None:
             return
@@ -200,7 +210,7 @@ class ContractHistory():
                     else:
                         frozen_cache[a['addr']][coins[1]] = int(frozen[coins[1]])'''
             balanceStr = self.http_request('invoke_contract_offline', \
-                [self.contract_caller, self.contract_exchange_id[0], "getUserBalance", "%s,%s" % (a['addr'], a['coin'])])
+                [self.contract_caller, self.contract_exchange_id[0], "getUserBalance", "%s,%s" % (a['addr'], self.hrc12Symbol2Addr(a['coin']))])
             balance = json.loads(balanceStr)
             UserBalance.query.filter_by(address=a['addr'], asset_symbol=a['coin']).delete()
             if 'locked' not in balance:
@@ -222,7 +232,6 @@ class ContractHistory():
         for obj in invoke_obj:
             if not obj['exec_succeed']:
                 continue
-            
             if op[0] == ContractHistory.OP_TYPE_CONTRACT_REGISTER:
                 abi = json.dumps(op[1]['contract_code']['abi'])
                 if abi == ContractHistory.STO_TYPE_ABI:
@@ -256,12 +265,25 @@ class ContractHistory():
                         except:
                             self.balance_changed_cache.append({'addr': order['from_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
             elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
-                contract_info = ContractInfo.query.filter_by(contract_id=op[1]['contract_id']).first()
-                if contract_info is None:
-                    continue
-                contract_type = contract_info.contract_type
+                last_contract_id = ""
                 for e in obj['events']:
-                    if contract_type == 'exchange' and e['event_name'] == 'Withdrawed':
+                    if e['contract_address'] != last_contract_id:
+                        last_contract_id = e['contract_address']
+                        contract_info = ContractInfo.query.filter_by(contract_id=e['contract_address']).first()
+                        if contract_info is None:
+                            continue
+                    contract_type = contract_info.contract_type
+                    if contract_type == 'exchange' and e['event_name'] == 'Deposited':
+                        order = json.loads(e['event_arg'])
+                        logging.info("Deposited:"+order['from_address'])
+                        self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['from_address'], \
+                                timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
+                                asset_type='deposit', asset_symbol=self.hrc12Addr2Symbol(order['symbol'], block['number']), fee=0))
+                        try:
+                            self.balance_changed_cache.index({'addr': order['from_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
+                        except:
+                            self.balance_changed_cache.append({'addr': order['from_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
+                    elif contract_type == 'exchange' and e['event_name'] == 'Withdrawed':
                         order = json.loads(e['event_arg'])
                         self.db.session.add(TxContractDepositWithdraw(tx_id=txid, address=order['to_address'], \
                                 timestamp=block['timestamp'], block_num=int(block['number']), amount=order['amount'], \
@@ -274,11 +296,14 @@ class ContractHistory():
                     elif contract_type == 'exchange' and (e['event_name'] == 'BuyOrderPutedOn' or e['event_name'] == 'SellOrderPutedOn'):
                         order = json.loads(e['event_arg'])
                         items = order['putOnOrder'].split(',')
+                        assets = order['exchangPair'].split('/')
+                        assets[0] = self.hrc12Addr2Symbol(assets[0], block['number'])
+                        assets[1] = self.hrc12Addr2Symbol(assets[1], block['number'])
+                        order['exchangPair'] = '/'.join(assets)
                         self.db.session.add(ContractExchangeOrder(address=items[2], tx_id=txid, origin_base_amount=int(items[0]), \
                             origin_quote_amount=int(items[1]), ex_type=order['OrderType'], ex_pair=order['exchangPair'], \
                             block_num=int(block['number']), current_base_amount=int(items[0]), current_quote_amount=int(items[1]), \
                             timestamp=block['timestamp'], stat=1))
-                        assets = order['exchangPair'].split('/')
                         if e['event_name'] == 'BuyOrderPutedOn':
                             logging.debug("[%s] BuyOrderPutedOn: %d - %d" % (order['exchangPair'], int(items[0]), int(items[1])))
                             # self.update_balance(items[2], assets[1], -1*int(items[1]), 2)
@@ -343,6 +368,8 @@ class ContractHistory():
                             maker_tx.stat = 4
                             self.db.session.add(maker_tx)
                             assets = maker_tx.ex_pair.split('/')
+                            assets[0] = self.hrc12Addr2Symbol(assets[0], block['number'])
+                            assets[1] = self.hrc12Addr2Symbol(assets[1], block['number'])
                             '''if maker_tx.ex_type == 'buy':
                                 self.update_balance(maker_tx.address, assets[1], maker_tx.current_quote_amount, 2)
                             elif maker_tx.ex_type == 'sell':
@@ -358,7 +385,7 @@ class ContractHistory():
                     elif contract_type == 'exchange' and (e['event_name'] == 'exchangePairOn'):
                         order = json.loads(e['event_arg'])
                         self.db.session.add(ContractExchangePair(contract_id=order['contractAddress'], tx_id=txid, \
-                                baseAssetSymbol=order['baseAssetSymbol'], quoteAssetSymbol=order['quoteAssetSymbol'], \
+                                baseAssetSymbol=self.hrc12Addr2Symbol(order['baseAssetSymbol'], block['number']), quoteAssetSymbol=self.hrc12Addr2Symbol(order['quoteAssetSymbol'], block['number']), \
                                 block_num=int(block['number']), stat=1))
                     elif contract_type == 'exchange' and (e['event_name'] == 'unboundExchangePairProposalApproved'):
                         order = json.loads(e['event_arg'])
@@ -373,7 +400,6 @@ class ContractHistory():
                         self.db.session.add(ContractPersonExchangeEvent(caller_addr=e['caller_addr'], event_name=e['event_name'], \
                                 event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \
                                 timestamp=block['timestamp'], tx_id=txid))
-
 
     def scan_block(self, fromBlock=0, max=0):
         if fromBlock > 0:
@@ -407,7 +433,7 @@ class ContractHistory():
                 tx_count = 0
                 tx_prefix = str(i)+'|'+block['transaction_ids'][tx_count]
                 for t in block['transactions']:
-                    # print(tx_prefix)
+                    # logging.info(tx_prefix)
                     op_count = 0
                     for op in t['operations']:
                         logging.debug(tx_prefix+','+str(op))
