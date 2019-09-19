@@ -75,8 +75,10 @@ class ContractHistory():
             else:
                 symbol = self.http_request("invoke_contract_offline",
                         [self.contract_caller, address, "tokenSymbol", ""])
+                precision = self.http_request("invoke_contract_offline",
+                        [self.contract_caller, address, "precision", ""])
                 self.hrc12_coins[address] = symbol
-                self.db.session.add(HRC12Coins(symbol=symbol, address=address, block_num=block_num))
+                self.db.session.add(HRC12Coins(symbol=symbol, address=address, precision=int(precision), block_num=block_num))
                 return symbol
 
 

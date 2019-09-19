@@ -8,7 +8,7 @@ from app.models import TxContractRawHistory, ServiceConfig, \
         TxContractEventHistory, ContractInfo, BlockRawHistory, ContractPersonExchangeOrder, \
         ContractExchangeOrder, TxContractDealHistory, PersonalSettings, UserBalance, \
         TxContractDealKdataWeekly, AccountInfo, TxContractDealKdata1Min, TxContractDealTick
-from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair, Announcements
+from app.models import kline_table_list, TxContractDepositWithdraw, ContractExchangePair, Announcements, HRC12Coins
 from app.k_line_obj import KLine1MinObj, KLine5MinObj, KLine15MinObj, KLine30MinObj, KLine1HourObj, KLine2HourObj, \
         KLine6HourObj, KLine12HourObj, KLineWeeklyObj, KLineDailyObj, KLineMonthlyObj
 from app.contract_history import ContractHistory
@@ -164,11 +164,19 @@ def hx_fdxqs_exchange_market_query(pair, depth=5):
         if pairs[0] == u'HX':
             base_precision = 100000
         else:
-            base_precision = 100000000
+            hrc12 = HRC12Coins.query.filter_by(symbol=pairs[0]).first()
+            if hrc12 is None:
+                base_precision = 100000000
+            else:
+                base_precision = hrc12.precision
         if pairs[1] == u'HX':
             quote_precision = 100000
         else:
-            quote_precision = 100000000
+            hrc12 = HRC12Coins.query.filter_by(symbol=pairs[1]).first()
+            if hrc12 is None:
+                base_precision = 100000000
+            else:
+                base_precision = hrc12.precision
         price = round(float(d.current_quote_amount) / float(d.current_base_amount) / quote_precision * base_precision, 4)
         market = result[d.ex_type]
         if market.get(price) is None:

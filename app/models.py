@@ -24,6 +24,7 @@ class HRC12Coins(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     symbol = db.Column(db.String(64), index=True)
     address = db.Column(db.String(128), unique=True, index=True)
+    precision = db.Column(db.Integer)
     desc = db.Column(db.Text, default=False)
     block_num = db.Column(db.Integer)
 
