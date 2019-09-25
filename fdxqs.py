@@ -447,12 +447,13 @@ def update_kline(times):
 @click.option('--times', default=1, type=int, help='scan times')
 @click.option('--kline', default=0, type=int, help='update kline data')
 @click.option('--currency', default=0, type=int, help='update coin price by QC')
-def scan_block(times, kline, currency):
+@click.option('--fork', default=1, type=int, help='check fork status')
+def scan_block(times, kline, currency, fork):
     ch = ContractHistory(app.config, db)
     total = 0
     import time
     while total < times or times <= 0:
-        ch.scan_block()
+        ch.scan_block(fork=fork)
         time.sleep(5)
         total += 1
         if kline == 1:

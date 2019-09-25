@@ -403,7 +403,7 @@ class ContractHistory():
                                 event_arg=e['event_arg'], block_num=int(e['block_num']), op_num=int(e['op_num']), contract_address=e['contract_address'], \
                                 timestamp=block['timestamp'], tx_id=txid))
 
-    def scan_block(self, fromBlock=0, max=0):
+    def scan_block(self, fromBlock=0, max=0, fork=1):
         if fromBlock > 0:
             fromBlockNum = fromBlock
         else:
@@ -425,7 +425,7 @@ class ContractHistory():
             if block is None:
                 logging.error("block %d is not fetched" % i)
                 continue
-            if self.check_fork(block):
+            if fork == 1 and self.check_fork(block):
                 return
             block['timestamp'] = datetime.datetime.strptime(block['timestamp'], r"%Y-%m-%dT%H:%M:%S")
             self.db.session.add(BlockRawHistory(block_num=block['number'], block_id=block['block_id'], prev_id=block['previous'], \
