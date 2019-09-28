@@ -268,13 +268,10 @@ class ContractHistory():
                         except:
                             self.balance_changed_cache.append({'addr': order['from_address'], 'coin': self.hrc12Addr2Symbol(order['symbol'], block['number'])})
             elif op[0] == ContractHistory.OP_TYPE_CONTRACT_INVOKE:
-                last_contract_id = ""
                 for e in obj['events']:
-                    if e['contract_address'] != last_contract_id:
-                        last_contract_id = e['contract_address']
-                        contract_info = ContractInfo.query.filter_by(contract_id=e['contract_address']).first()
-                        if contract_info is None:
-                            continue
+                    contract_info = ContractInfo.query.filter_by(contract_id=e['contract_address']).first()
+                    if contract_info is None:
+                        continue
                     contract_type = contract_info.contract_type
                     if contract_type == 'exchange' and e['event_name'] == 'Deposited':
                         order = json.loads(e['event_arg'])
