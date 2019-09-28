@@ -114,6 +114,7 @@ class ContractHistory():
         ContractPersonExchangeEvent.query.filter(ContractPersonExchangeEvent.block_num>=block_num).delete()
         BlockRawHistory.query.filter(BlockRawHistory.block_num>=block_num).delete()
         ContractExchangeOrder.query.filter(ContractExchangeOrder.block_num>=block_num).delete()
+        TxContractDepositWithdraw.query.filter(TxContractDepositWithdraw.block_num>=block_num).delete()
         last_block = BlockRawHistory.query.order_by(BlockRawHistory.block_num.desc()).first()
         if last_block is None:
             return
